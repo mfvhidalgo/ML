@@ -1,22 +1,8 @@
 from typing import List, Union, Any
 from itertools import combinations
+import temp_remove_this_item, list_to_formula
 
-def get_lambdas(value: Union[str, float, int]) -> List[float]:
-    '''
-    Takes in a comma-separated-list separates them.
-    Alternatively, takes in a single int/float and returns it
-    '''
-
-    if isinstance(value,(int,float)):
-        return value
-    
-    elif isinstance(value,str):
-        return [float(val) for val in value.split(',')]
-    
-    else:
-        raise TypeError('Lambda value enters is not an str, int, or float')
-
-def get_base_exponent(term_str):
+def get_base_exponent(term_str: str) -> List:
     '''
     Takes in a term (str) such as C**3 and returns a list of [base,exponent] (such as [C,3])
     '''
@@ -32,44 +18,49 @@ def get_base_exponent(term_str):
     
     return [base_term,exponent]
 
-def get_lower_order_from_exponent(term_str):
+def get_lower_order_from_exponent(term_str: str,
+                                  input_patsy: bool = False,
+                                  outpit_patsy: bool = True) -> List:
     '''
     Takes in a str within I() from patsy and returns itself plus lower order terms
-    For example, if term_str is C**3, it will return a list of [I(C**3),I(C**2),C]
+    For example, if term_str is C**3, it will return a list of [I(C**3),I(C**2),C].
 
     Parameters:
         term_str (str): string containing a term in a patsy model
+        input_patsy (bool): if True, term_str is surrounded by I().
+        output_patsy (bool): if True, will surround each returned term (that have exponents) with 'I()'.
+                             if False, will return terms as is.
 
     Returns:
         List: list of terms containing the starting term and any lower order terms
     '''
     model_terms = []
     hasPower = False
+    if input_patsy:
+        term_str = term_str[2:-1]
     base_term,exponent = get_base_exponent(term_str)
 
     if exponent == 0:
-        return [f'I({term_str}'] # in case there are non-exponent items like log under I()
+        if outpit_patsy:
+            return [f'I({term_str})'] # in case there are non-exponent items like log under I()
+        else:
+            return [f'{term_str}']
     else:
         if int(exponent) == exponent: # remove float exponents if exponent is basically an int. useful for later when removing duplicates
             exponent = int(exponent)
         model_terms.append(f'I({base_term}**{exponent})')
         exponent -= 1
         while exponent > 1:
-            sub_term = f'I({base_term}**{exponent})'
+            if outpit_patsy:
+                sub_term = f'I({base_term}**{exponent})'
+            else:
+                sub_term = f'{base_term}**{exponent}'
             if not(sub_term in model_terms):
                 model_terms.append(sub_term)
             exponent -= 1
         if not(base_term in model_terms):
             model_terms.append(base_term)
         return model_terms
-
-def temp_remove_this_item(lst: List,item: Any):
-    '''
-    Takes a list, copies it, then removes a specified item
-    '''
-    this_list = lst.copy()
-    this_list.remove(item)
-    return this_list
 
 def get_lower_order_from_interaction(term_str):
     '''
@@ -115,24 +106,6 @@ def get_lower_order_from_interaction(term_str):
 
     return list(dict.fromkeys(model_terms))
 
-def list_to_formula(terms: List) -> str:
-    '''
-    Takes in a list of terms and returns it as the right side (after the ~) of a patsy formula
-    For example, if terms = [A, B, A:B], the function will return
-    'A + B + C'
-
-    Parameters:
-        terms (List): list containing all terms in the patsy model
-  
-    Returns:
-        str: string of the right side of the patsy formula
-    '''
-    formula = ''
-    terms = list(dict.fromkeys(terms))
-    for term in terms:
-        formula += f'{str(term)}+'
-    return formula[:-1]
-
 def get_all_lower_order_terms(formula: str) -> List:
     '''
     Takes in a str of patsy formula and returns a list of individual terms,
@@ -165,6 +138,8 @@ def get_all_lower_order_terms(formula: str) -> List:
             if not(term in model_terms):
                 model_terms.append(term)
     
+    model_terms = list(dict.fromkeys(model_terms))
+
     return {'terms':model_terms,
             'formula':f'{response_str}~{list_to_formula(model_terms)}'}
 
