@@ -1,3 +1,5 @@
+from typing import List, Union, Any
+
 def list_to_formula(terms: List) -> str:
     '''
     Takes in a list of terms and returns it as the right side (after the ~) of a patsy formula

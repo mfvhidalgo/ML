@@ -1,6 +1,7 @@
 from typing import List, Union, Any
 from itertools import combinations
-import temp_remove_this_item, list_to_formula
+from .misc_func import temp_remove_this_item
+from .formulas import list_to_formula
 
 def get_base_exponent(term_str: str) -> List:
     '''
