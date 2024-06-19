@@ -4,7 +4,7 @@ def list_to_formula(terms: List) -> str:
     '''
     Takes in a list of terms and returns it as the right side (after the ~) of a patsy formula
     For example, if terms = [A, B, A:B], the function will return
-    'A + B + C'
+    'A + B + A:B'
 
     Parameters:
         terms (List): list containing all terms in the patsy model
@@ -16,4 +16,6 @@ def list_to_formula(terms: List) -> str:
     terms = list(dict.fromkeys(terms))
     for term in terms:
         formula += f'{str(term)}+'
-    return formula[:-1]
+    if formula[-1] == '+':
+        formula = formula[:-1]
+    return formula
