@@ -62,20 +62,23 @@ def get_base_exponent(term_str: str) -> List:
     Takes in a term (str) such as C**3 and returns a list of [base,exponent] (such as [C,3]).
     Only works with powers like np.power(A,2) and A**2.
     '''
-    base_term,exponent = term_str,1
-    if 'np.power(' in term_str:
-        comma_index = term_str.index(',')
-        base_term = term_str[9:comma_index]
-        exponent = float(term_str[comma_index+1:-1])
+    if ':' in term_str:
+        raise ValueError('term contains interaction and not just an exponent')
+    else:
+        base_term,exponent = term_str,1
+        if 'np.power(' in term_str:
+            comma_index = term_str.index(',')
+            base_term = term_str[9:comma_index]
+            exponent = float(term_str[comma_index+1:-1])
 
-    if '**' in term_str:
-        base_term,exponent = term_str[2:-1].split('**')
-        exponent = float(exponent)
-    
-    if int(exponent) == exponent: # remove float exponents if exponent is basically an int. useful for later when removing duplicates
-        exponent = int(exponent)
+        if '**' in term_str:
+            base_term,exponent = term_str[2:-1].split('**')
+            exponent = float(exponent)
+        
+        if int(exponent) == exponent: # remove float exponents if exponent is basically an int. useful for later when removing duplicates
+            exponent = int(exponent)
 
-    return [base_term,exponent]
+        return [base_term,exponent]
 
 def tuple_to_interaction(combo: Tuple) -> str:
     '''
@@ -106,10 +109,12 @@ def tuple_to_interaction(combo: Tuple) -> str:
     return ':'.join([ac for _, ac in sorted(zip(add_combo_bases, add_combo))])
     '''
 
-def tuple_to_term(combo: Tuple) -> str:
+def tuple_to_term(combo: Tuple,
+                  return_order: bool = False) -> Union[str,List]:
     '''
     Similar to tuple_to_interaction in that it takes a tuple and combines them into an interaction term.
     This has the added function of combining similar base terms (i.e. A:A becomes A**2)
+    wheras tuple_to_interaction ignores these.
     '''
     all_terms = []
     for term in combo:
@@ -122,13 +127,18 @@ def tuple_to_term(combo: Tuple) -> str:
     counts = Counter(all_terms)
 
     terms = []
+    order = 0
     for term, count in counts.items():
         if count > 1:
             terms.append(f'I({term}**{count})')
+            order += count
         else:
             terms.append(term)
-    
-    return ":".join(sort_terms(terms))
+            order += 1
+    if return_order:
+        return [":".join(sort_terms(terms)),order]
+    else:
+        return ":".join(sort_terms(terms))
 
 def sort_terms(terms: List) -> List:
     '''
@@ -167,10 +177,22 @@ def sort_terms(terms: List) -> List:
     
     return sorted_terms
 
-def get_all_higher_order_terms(base_terms: List,max_order: int) -> List:
+def get_all_higher_order_terms(base_terms: List,
+                               max_order: int,
+                               max_exponent: int = 'max_order') -> List:
+    if max_exponent == 'max_order':
+        max_exponent = max_order
+    
     all_terms = []
     for order in range(1,max_order+1):
         combos = combinations_with_replacement(base_terms,order)
         for combo in combos:
-            all_terms.append(tuple_to_term(combo))
+            term = tuple_to_term(combo)
+            if ':' in term:
+                all_terms.append(term)
+            else:
+                base,exponent = get_base_exponent(term)
+                if exponent <= max_exponent:
+                    all_terms.append(term)
+
     return sort_terms(all_terms)

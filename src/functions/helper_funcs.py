@@ -36,7 +36,7 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
             'max': design_parameters['Max Level'].to_dict()
             }
 
-    model_types = design_parameters['Model type'].to_dict()
+    term_types = design_parameters['Term type'].to_dict()
     model_orders = response_parameters['Starting model type'].to_dict()
 
     responses = response_parameters.index
@@ -55,7 +55,7 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
             'response_parameters':response_parameters,
             'features':features,
             'levels':levels,
-            'model_types':model_types,
+            'term_types':term_types,
             'model_orders':model_orders,
             'responses':responses,
             'lambdas':lambdas,

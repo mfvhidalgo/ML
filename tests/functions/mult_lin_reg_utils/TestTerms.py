@@ -5,12 +5,16 @@ import src.functions.mult_lin_reg_utils.terms as terms
 
 class TestTerms(unittest.TestCase):
     def test_get_base_exponent(self):
-        self.assertCountEqual(terms.get_base_exponent('I(C**3)'), ['C',3])
-        self.assertCountEqual(terms.get_base_exponent('I(C**3.0)'), ['C',3])
-        self.assertCountEqual(terms.get_base_exponent('I(C**3.5)'), ['C',3.5])
-        self.assertCountEqual(terms.get_base_exponent('C'), ['C',1])
-        self.assertCountEqual(terms.get_base_exponent('np.power(C,5)'), ['C',5])
-        self.assertCountEqual(terms.get_base_exponent('np.sin(C)'), ['np.sin(C)',1])
+        self.assertEqual(terms.get_base_exponent('I(C**3)'), ['C',3])
+        self.assertEqual(terms.get_base_exponent('I(C**3.0)'), ['C',3])
+        self.assertEqual(terms.get_base_exponent('I(C**3.5)'), ['C',3.5])
+        self.assertEqual(terms.get_base_exponent('C'), ['C',1])
+        self.assertEqual(terms.get_base_exponent('np.power(C,5)'), ['C',5])
+        self.assertEqual(terms.get_base_exponent('np.sin(C)'), ['np.sin(C)',1])
+        with self.assertRaises(ValueError) as context:
+            terms.get_base_exponent('A:I(C**2)')
+        self.assertIn('term contains interaction and not just an exponent', str(context.exception))
+        
 
     def test_sort_terms(self):
         self.assertEqual(terms.sort_terms(['A','I(A**3)','B']),
@@ -41,6 +45,8 @@ class TestTerms(unittest.TestCase):
                          'A:C:K:I(B**5)')
         self.assertEqual(terms.tuple_to_term(('B:C:A:K','A:I(B**2)','B')),
                          'C:K:I(A**2):I(B**4)')
+        self.assertEqual(terms.tuple_to_term(('B:C:A:K','A:I(B**2)','B'),True),
+                         ['C:K:I(A**2):I(B**4)',8])
 
     def test_get_base_order(self):
         self.assertEqual(terms.get_base_order(('A:B:C')),
@@ -62,6 +68,14 @@ class TestTerms(unittest.TestCase):
                           'B:I(A**2)','B:I(C**2)',
                           'C:I(A**2)','C:I(B**2)',
                           'I(A**3)','I(B**3)','I(C**3)'])
+        self.assertEqual(terms.get_all_higher_order_terms(('A','B','C'),3,2),
+                         ['A','B','C',
+                          'A:B','A:C','B:C',
+                          'I(A**2)','I(B**2)','I(C**2)',
+                          'A:B:C',
+                          'A:I(B**2)','A:I(C**2)',
+                          'B:I(A**2)','B:I(C**2)',
+                          'C:I(A**2)','C:I(B**2)'])
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,3 +7,5 @@ __pycache__
 
 # Ignore some temp doc files
 docs/ToDo.docx
+
+for_running_test_code.py

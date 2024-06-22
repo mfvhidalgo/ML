@@ -33,7 +33,7 @@ class TestHierarchy(unittest.TestCase):
 
     def test_get_all_lower_order_terms(self):
         self.assertEqual(hierarchy.get_all_lower_order_terms('y ~ A + B + I(C**3)+ E:D'),
-                                                             'y~A+B+C+D+E+I(C**2)+D:E+I(C**3)')
+                                                             'y~A+B+C+D+E+D:E+I(C**2)+I(C**3)')
 
 if __name__ == '__main__':
     unittest.main()
