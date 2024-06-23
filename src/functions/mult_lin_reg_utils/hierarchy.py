@@ -110,7 +110,7 @@ def get_all_lower_order_terms(formula: str) -> str:
             if not(term in model_terms):
                 model_terms.append(term)
     model_terms = sort_terms(list(dict.fromkeys(model_terms)))
-    return f'{response_str}~{list_to_formula(model_terms)}'
+    return list_to_formula(model_terms,response=response_str)
 
 
 

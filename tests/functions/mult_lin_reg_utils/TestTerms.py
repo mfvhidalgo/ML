@@ -14,8 +14,7 @@ class TestTerms(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             terms.get_base_exponent('A:I(C**2)')
         self.assertIn('term contains interaction and not just an exponent', str(context.exception))
-        
-
+    
     def test_sort_terms(self):
         self.assertEqual(terms.sort_terms(['A','I(A**3)','B']),
                          ['A','B','I(A**3)'])
@@ -76,6 +75,20 @@ class TestTerms(unittest.TestCase):
                           'A:I(B**2)','A:I(C**2)',
                           'B:I(A**2)','B:I(C**2)',
                           'C:I(A**2)','C:I(B**2)'])
+
+    def test_list_to_orders(self):
+        self.assertEqual(terms.list_to_orders(['A','B','C']),
+                         {1:['A','B','C']})
+        self.assertEqual(terms.list_to_orders(['A','B','C','I(C**2)','A:B','A:I(C**2)']),
+                         {1:['A','B','C'],
+                          2:['I(C**2)','A:B',],
+                          3:['A:I(C**2)']})
+
+    def test_list_to_formula(self):
+        self.assertEqual(terms.list_to_formula(''),
+                         'response~1')
+
+
 
 if __name__ == '__main__':
     unittest.main()

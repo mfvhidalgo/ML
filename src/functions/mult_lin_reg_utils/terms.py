@@ -1,4 +1,4 @@
-from typing import List, Union, Any, Tuple
+from typing import List, Union, Any, Tuple, Dict
 import numpy as np
 from itertools import combinations, combinations_with_replacement
 from collections import Counter
@@ -11,7 +11,9 @@ Functions related to the processing of terms in a patsy model, especially helper
 
 '''
 
-def list_to_formula(terms: List) -> str:
+def list_to_formula(terms: List,
+                    term_types: Dict = {},
+                    response: str = 'response') -> str:
     '''
     Takes in a list of terms and returns it as the right side (after the ~) of a patsy formula
     For example, if terms = [A, B, A:B], the function will return
@@ -19,24 +21,35 @@ def list_to_formula(terms: List) -> str:
 
     Parameters:
         terms (List): list containing all terms in the patsy model
+        term_types (Dict): dict where the keys are terms
+                           and values show whether that term is a Mixture or Process term.
+                           By default is blank so assumes all terms are Process terms.
+        response (str): the left part of the ~
   
     Returns:
         str: string of the right side of the patsy formula
     '''
+
     formula = ''
     terms = list(dict.fromkeys(terms))
     for term in terms:
         formula += f'{str(term)}+'
-    if formula[-1] == '+':
-        formula = formula[:-1]
-    return formula
+    if formula == '':
+        return f"{response}~1"
+    else:
+        if formula[-1] == '+':
+            formula = formula[:-1]
+        if 'Mixture' in term_types.values():
+            formula = f"{response}~{formula}-1"
+        return f"{response}~{formula}"
 
 def get_base_order(term_str: str) -> List:
     '''
     Helper function. Expansion of get_base_exponent to include
     getting the base and order of interaction terms.
-    Assumes that the base will be whichever letter is alphabetical.
-    For example, 'C,I(A**2):B' will return I(A**2):B:C 
+    Assumes that the base will be whichever letter is alphabetical
+    among the lowest ordered terms.
+    For example 'B:I(A**2):I(B**3)' returns ['B',6]
 
     '''
     if ':' in term_str:
@@ -196,3 +209,27 @@ def get_all_higher_order_terms(base_terms: List,
                     all_terms.append(term)
 
     return sort_terms(all_terms)
+
+def list_to_orders(terms_list: List) -> Dict:
+    '''
+    Helper function, converts a list of terms into a dict
+    where each key is the order and the values are lists of terms of that order.
+    For example, ['A','B','C','I(C**2)','A:B','A:I(C**2)'] will return
+    {1:['A','B','C'], 2:['I(C**2)','A:B',], 3:['A:I(C**2)']})
+
+    Parameters:
+        terms_list (List): list of terms
+
+    Returns:
+        Dict: dictionary where the keys are the orders
+        and the values are lists of terms of that value
+    '''
+
+    terms = {}
+    for term in terms_list:
+        base,order = get_base_order(term)
+        if not(order in terms):
+            terms[order] = []
+        terms[order].append(term)
+    
+    return terms
