@@ -34,9 +34,9 @@ def model_reduction(data: pd.DataFrame,
         raise ValueError('key_stat must be either aicc or bic')
 
     if direction == 'forwards':
-        forward_model_reduction(data,terms_list,term_types,response,key_stat)
+        return forward_model_reduction(data,terms_list,term_types,response,key_stat)
     elif direction == 'backwards':
-        backward_model_reduction(data,terms_list,term_types,response,key_stat)
+        return backward_model_reduction(data,terms_list,term_types,response,key_stat)
     else:
         raise ValueError('direction must be either forwards or backwards')
     
