@@ -20,8 +20,8 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
     '''
     # load data from Data.xlsx
     data = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Data')
-    design_parameters = pd.read_excel('Data.xlsx', sheet_name = 'Design Parameters').set_index('Code')
-    response_parameters = pd.read_excel('Data.xlsx', sheet_name = 'Responses').set_index('Response')
+    design_parameters = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Design Parameters').set_index('Code')
+    response_parameters = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Responses').set_index('Response')
 
     # remove spaces and parentheses from the feature and response names
     replacements = {' ':'','(':'',')':'','-':'','+':'','*':'','/':''}

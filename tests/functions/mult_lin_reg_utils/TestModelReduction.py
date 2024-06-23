@@ -8,40 +8,79 @@ data = pd.read_excel('tests//functions//mult_lin_reg_utils//Data.xlsx')
 
 class TestTerms(unittest.TestCase):
     def test_forward_model_reduction(self):
-        self.assertEqual(list(model_reduction.forward_model_reduction(data,
-                                                                 ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
-                                                                 term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                                 response = 'R1',
-                                                                 key_stat = 'bic').params.index),
-                         ['Intercept', 'C', 'B', 'I(A ** 2)', 'A', 'A:B', 'I(C ** 2)'])
+        model = model_reduction.forward_model_reduction(data,
+                                                        ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
+                                                        term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                        response = 'R1',
+                                                        key_stat = 'bic')
+        terms,values = list(model.params.index),list(model.params.values)
+        fit = dict(zip(terms,values))
+
+        actual_terms = ['Intercept', 'A', 'B', 'C', 'A:B', 'I(A ** 2)', 'I(C ** 2)'] 
+        actual_vals = [162.78786285370947, -0.31209458333335327, -0.30569033714607574, -0.7669499682690404, 0.2676925332441158, -0.6726353410194186, -0.5053828629166617]
+        actual = dict(zip(actual_terms,actual_vals))
+
+        self.assertCountEqual(terms,actual_terms)
     
-    def test_forward_model_reduction(self):
-        test_vals = list(model_reduction.forward_model_reduction(data,
-                                                                ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
-                                                                term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                                response = 'R1',
-                                                                key_stat = 'bic').params.values)
-        actual_vals = [162.78786231737988, -0.7669503235619821, -0.3056904370850795, -0.6726350233835063, -0.3120946149626409, 0.2676924728186698, -0.5053828098375348]
-        for test, actual in zip (test_vals,actual_vals):
-            self.assertAlmostEqual(test, actual, places=5)
+        for fit_term, actual_term in zip (terms,actual_terms):
+            self.assertAlmostEqual(fit[fit_term], actual[actual_term], places=5)
+
+        # same as above but aicc
+        model = model_reduction.forward_model_reduction(data,
+                                                        ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
+                                                        term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                        response = 'R1',
+                                                        key_stat = 'aicc')
+        terms,values = list(model.params.index),list(model.params.values)
+        fit = dict(zip(terms,values))
+        
+        actual_terms = ['Intercept', 'A', 'B', 'C', 'I(A ** 2)'] 
+        actual_vals = [162.49372299873937, -0.31209458333334084, -0.29081850000000237, -0.7383119429590046, -0.6726353410193298]
+        actual = dict(zip(actual_terms,actual_vals))
+
+        self.assertCountEqual(terms,actual_terms)
     
-    def test_forward_model_reduction(self):
-        self.assertEqual(list(model_reduction.forward_model_reduction(data,
-                                                                 ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
-                                                                 term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                                 response = 'R1',
-                                                                 key_stat = 'aicc').params.index),
-                         ['Intercept', 'C', 'B', 'I(A ** 2)', 'A'])
+        for fit_term, actual_term in zip (terms,actual_terms):
+            self.assertAlmostEqual(fit[fit_term], actual[actual_term], places=5)
     
-    def test_forward_model_reduction(self):
-        test_vals = list(model_reduction.forward_model_reduction(data,
-                                                                ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
-                                                                term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                                response = 'R1',
-                                                                key_stat = 'bic').params.values)
-        actual_vals = [162.78786285370944, -0.7669499682690404, -0.3056903371460551, -0.67263502, -0.31209461]
-        for test, actual in zip (test_vals,actual_vals):
-            self.assertAlmostEqual(test, actual, places=5)
+    def test_backward_model_reduction(self):
+        model = model_reduction.backward_model_reduction(data,
+                                                        ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
+                                                        term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                        response = 'R1',
+                                                        key_stat = 'bic')
+        terms,values = list(model.params.index),list(model.params.values)
+        fit = dict(zip(terms,values))
+        print(terms)
+        print(values)
+
+        actual_terms = ['Intercept', 'A', 'B', 'C', 'A:B', 'I(A ** 2)', 'I(C ** 2)'] 
+        actual_vals = [162.78786285370947, -0.31209458333335327, -0.30569033714607574, -0.7669499682690404, 0.2676925332441158, -0.6726353410194186, -0.5053828629166617]
+        actual = dict(zip(actual_terms,actual_vals))
+
+        self.assertCountEqual(terms,actual_terms)
+    
+        for fit_term, actual_term in zip (terms,actual_terms):
+            self.assertAlmostEqual(fit[fit_term], actual[actual_term], places=5)
+
+        # same as above but aicc
+        model = model_reduction.backward_model_reduction(data,
+                                                        ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
+                                                        term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                        response = 'R1',
+                                                        key_stat = 'aicc')
+        terms,values = list(model.params.index),list(model.params.values)
+        fit = dict(zip(terms,values))
+        
+        actual_terms = ['Intercept', 'A', 'B', 'C', 'I(A ** 2)'] 
+        actual_vals = [162.49372299873937, -0.31209458333334084, -0.29081850000000237, -0.7383119429590046, -0.6726353410193298]
+        actual = dict(zip(actual_terms,actual_vals))
+
+        self.assertCountEqual(terms,actual_terms)
+    
+        for fit_term, actual_term in zip (terms,actual_terms):
+            self.assertAlmostEqual(fit[fit_term], actual[actual_term], places=5)
+
 
 if __name__ == '__main__':
     unittest.main()
