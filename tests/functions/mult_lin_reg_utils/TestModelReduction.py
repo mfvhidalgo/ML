@@ -3,15 +3,31 @@ import unittest
 import pandas as pd
 
 import src.functions.mult_lin_reg_utils.model_reduction as model_reduction
+from src.functions.helper_funcs import load_data_xlsx
 
-data = pd.read_excel('tests//functions//mult_lin_reg_utils//Data.xlsx')
+data_xlsx = load_data_xlsx('tests//functions//mult_lin_reg_utils//Data.xlsx')
+
+data = data_xlsx['data']
+'''
+design_parameters = data_xlsx['design_parameters']
+response_parameters = data_xlsx['response_parameters']
+features = data_xlsx['features']
+levels = data_xlsx['levels']
+term_types = data_xlsx['term_types']
+model_orders = data_xlsx['model_orders']
+responses = data_xlsx['responses']
+lambdas = data_xlsx['lambdas']
+rescalers = data_xlsx['rescalers']
+'''
+
+response = 'C56mAhg'
 
 class TestTerms(unittest.TestCase):
     def test_forward_model_reduction(self):
         model = model_reduction.forward_model_reduction(data,
                                                         ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
                                                         term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                        response = 'R1',
+                                                        response = response,
                                                         key_stat = 'bic')
         terms,values = list(model.params.index),list(model.params.values)
         fit = dict(zip(terms,values))
@@ -29,7 +45,7 @@ class TestTerms(unittest.TestCase):
         model = model_reduction.forward_model_reduction(data,
                                                         ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
                                                         term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                        response = 'R1',
+                                                        response = response,
                                                         key_stat = 'aicc')
         terms,values = list(model.params.index),list(model.params.values)
         fit = dict(zip(terms,values))
@@ -47,7 +63,7 @@ class TestTerms(unittest.TestCase):
         model = model_reduction.backward_model_reduction(data,
                                                         ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
                                                         term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                        response = 'R1',
+                                                        response = response,
                                                         key_stat = 'bic')
         terms,values = list(model.params.index),list(model.params.values)
         fit = dict(zip(terms,values))
@@ -65,7 +81,7 @@ class TestTerms(unittest.TestCase):
         model = model_reduction.backward_model_reduction(data,
                                                         ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
                                                         term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                        response = 'R1',
+                                                        response = response,
                                                         key_stat = 'aicc')
         terms,values = list(model.params.index),list(model.params.values)
         fit = dict(zip(terms,values))
@@ -83,7 +99,7 @@ class TestTerms(unittest.TestCase):
         model = model_reduction.model_reduction(data,
                                                 ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
                                                 term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                response = 'R1',
+                                                response = response,
                                                 key_stat = 'bic',
                                                 direction='forwards')
         terms,values = list(model.params.index),list(model.params.values)
@@ -101,7 +117,7 @@ class TestTerms(unittest.TestCase):
         model = model_reduction.model_reduction(data,
                                                 ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
                                                 term_types = {'A':'Process','B':'Process','C':'Process'},
-                                                response = 'R1',
+                                                response = response,
                                                 key_stat = 'aicc',
                                                 direction='backwards')
         terms,values = list(model.params.index),list(model.params.values)
