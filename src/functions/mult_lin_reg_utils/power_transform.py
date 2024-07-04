@@ -7,16 +7,19 @@ import pandas as pd
 
 CONF_INT_CRIT = 3.841 # 95% confidence interval value for chi-squared https://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm
 
-def best_boxcox_lambda(data: pd.DataFrame,
+def best_boxcox_lambda(series_input: pd.Series,
                        formula: str,
                        response: str,
                        lambdas: List = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2]
                        ) -> Dict:
     '''
-    Finds the best lambda for Box-Cox transformations
+    Finds the best lambda for Box-Cox transformations. Note that the complete power transform
+    is used to find the best lambda (including the use of a geometric mean), but we prefer to 
+    use the simpler lambda transform for the final modelling. This is how it is implemended in
+    Design Expert, so we will follow this convention.
 
     Parameters:
-        data (pd.DataFrame): pandas DataFrame containing the data of the features and responses
+        series_input (pd.Series): pandas Series containing the data of the features and responses
         formula (str): patsy-style formula for ols
         response (str): column name of the response
         lambdas (List): list of lambda values to try
@@ -24,28 +27,28 @@ def best_boxcox_lambda(data: pd.DataFrame,
     Returns:
         Dict: the following keys have the following values:
                 lambdas in conf int (List): lambdas with Ln(residual sum of squares) less than the critical value
-                                        (i.e. within the confidence interval)
+                                            (i.e. within the confidence interval)
                 lambdas (List): all lambdas tested
                 ln resid sum squares (List): all Ln(residual sum of squares)
                 confidence interval (float): critical Ln(residual sum of squares) value for confidence interval
                 best lambda (float): lambda with the lowest Ln(residual sum of squares)
     '''
 
-    df_original = data.copy()
+    series_original = series_input.copy()
 
-    if any(val < 0 for val in df_original[response]):
-        df_original[response] += abs(min(df_original[response])) + 1
-    geom_mean_resp = geometric_mean(df_original[response]) 
+    if series_original.min() < 0:
+        series_original = series_original + abs(series_original.min()) + 1
+    geom_mean_resp = geometric_mean(series_original) 
     
     models = {} 
     ln_residSS = []
     for lmbda in lambdas:
-        df = df_original.copy()
+        series = series_original.copy()
         if lmbda == 0:
-            df[response] = stats.boxcox(df[response], lmbda=lmbda) * geom_mean_resp
+            series = stats.boxcox(series, lmbda=lmbda) * geom_mean_resp
         else:
-            df[response] = stats.boxcox(df[response], lmbda=lmbda) / (geom_mean_resp**(lmbda-1))
-        models[lmbda] = ols(formula, data=df).fit()
+            series = stats.boxcox(series, lmbda=lmbda) / (geom_mean_resp**(lmbda-1))
+        models[lmbda] = ols(formula, data=series).fit()
         ln_residSS.append(np.log(sum(models[lmbda].resid**2)))
     best_resid_lmbda = sorted(zip(ln_residSS,lambdas))[0]
     best_resid,best_lambda = best_resid_lmbda
@@ -62,33 +65,37 @@ def best_boxcox_lambda(data: pd.DataFrame,
             'best lambda':best_lambda
             }
 
-def Box_Cox_transform(data: pd.Series,
+def Box_Cox_transform(series_input: pd.Series,
                       lmbda: float,
                       reverse: bool = False):
     '''
     Power transform based on Box-Cox transformation. A custom implementaton is needed
     because this functon is slightly different from sklearn's power_transform.
     Specifically, the Box-Cox transformation is normally calculated as (x**lmbda - 1) / lmbda.
-    However, DesignExpert calculates it as (x**lmbda - 1).
+    However, DesignExpert calculates it as (x**lmbda).
     We follow the DesignExpert implementation because that is what is used as a reference for this script.
 
     Parameters:
-        data (pd.Series): pandas DataFrame containing the data of the features and responses
+        data (pd.Series): pandas Series containing the response
         lmbda (float): lambda value for transformation
         reverse (bool): False if applying the transformation
                         and True if converting transformed data back to the original data
     '''
     
-    df = data.copy()
+    series = series_input.copy()
+        
+    if series.min() < 0:
+        series = series + abs(series.min()) + 1
+        
     if lmbda == 0:
         if reverse:
-            df = np.exp(df)
+            series = np.exp(series)
         else:
-            df = np.log(df)
+            series = np.log(series)
     else:
         if reverse:
-            df = df**(1/lmbda)
+            series = series**(1/lmbda)
         else:
-            df = df**lmbda
+            series = series**lmbda
 
-    return df
+    return series
