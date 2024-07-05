@@ -23,7 +23,7 @@ response = 'C56mAhg'
 
 formula = f"{response}~A+B+C+A:B+I(A**2)+I(C**2)"
 
-class TestTerms(unittest.TestCase):
+class TestPowerTransform(unittest.TestCase):
     def test_best_boxcox_lambda(self):
         lambda_values = power_transform.best_boxcox_lambda(data,
                                                            formula,
@@ -40,13 +40,12 @@ class TestTerms(unittest.TestCase):
 
         for key in ['confidence interval','best lambda']:
             self.assertAlmostEqual(lambda_values[key],actual_lambda_values[key], places=5)
-        
 
         for test, actual in zip (lambda_values['ln resid sum squares'],actual_lambda_values['ln resid sum squares']):
             self.assertAlmostEqual(test, actual, places=5)
 
-    def test_best_boxcox_lambda(self):
-        test_vals = power_transform.Box_Cox_transform(data[response],
+    def test_box_cox_transform(self):
+        test_vals = power_transform.box_cox_transform(data[response],
                                                       0.5)
         actual_vals = [12.6990736,12.77678805,12.79106192,12.74938012,12.77246849,
                   12.75039498,12.67293608,12.71702347,12.73954353,12.66467071,

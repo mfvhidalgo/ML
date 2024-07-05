@@ -7,7 +7,7 @@ import pandas as pd
 
 CONF_INT_CRIT = 3.841 # 95% confidence interval value for chi-squared https://www.itl.nist.gov/div898/handbook/eda/section3/eda3674.htm
 
-def best_boxcox_lambda(series_input: pd.Series,
+def best_boxcox_lambda(df_input: pd.DataFrame,
                        formula: str,
                        response: str,
                        lambdas: List = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2]
@@ -19,7 +19,7 @@ def best_boxcox_lambda(series_input: pd.Series,
     Design Expert, so we will follow this convention.
 
     Parameters:
-        series_input (pd.Series): pandas Series containing the data of the features and responses
+        df_input (pd.DataFrame): pandas DataFrame containing the data of the features and responses
         formula (str): patsy-style formula for ols
         response (str): column name of the response
         lambdas (List): list of lambda values to try
@@ -34,21 +34,21 @@ def best_boxcox_lambda(series_input: pd.Series,
                 best lambda (float): lambda with the lowest Ln(residual sum of squares)
     '''
 
-    series_original = series_input.copy()
+    df_original = df_input.copy()
 
-    if series_original.min() < 0:
-        series_original = series_original + abs(series_original.min()) + 1
-    geom_mean_resp = geometric_mean(series_original) 
+    if df_original[response].min() < 0:
+        df_original = df_original + abs(df_original[response].min()) + 1
+    geom_mean_resp = geometric_mean(df_original[response]) 
     
     models = {} 
     ln_residSS = []
     for lmbda in lambdas:
-        series = series_original.copy()
+        df = df_original.copy()
         if lmbda == 0:
-            series = stats.boxcox(series, lmbda=lmbda) * geom_mean_resp
+            df[response] = stats.boxcox(df[response], lmbda=lmbda) * geom_mean_resp
         else:
-            series = stats.boxcox(series, lmbda=lmbda) / (geom_mean_resp**(lmbda-1))
-        models[lmbda] = ols(formula, data=series).fit()
+            df[response] = stats.boxcox(df[response], lmbda=lmbda) / (geom_mean_resp**(lmbda-1))
+        models[lmbda] = ols(formula, data=df).fit()
         ln_residSS.append(np.log(sum(models[lmbda].resid**2)))
     best_resid_lmbda = sorted(zip(ln_residSS,lambdas))[0]
     best_resid,best_lambda = best_resid_lmbda
@@ -65,7 +65,7 @@ def best_boxcox_lambda(series_input: pd.Series,
             'best lambda':best_lambda
             }
 
-def Box_Cox_transform(series_input: pd.Series,
+def box_cox_transform(series_input: pd.Series,
                       lmbda: float,
                       reverse: bool = False):
     '''
