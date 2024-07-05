@@ -1,9 +1,10 @@
 from typing import List, Dict
 import pandas as pd
 from statsmodels.formula.api import ols
+from statsmodels.regression.linear_model import OLS
 
 from .terms import list_to_orders, list_to_formula
-from .statistics import calc_bic_aicc
+from .statistics import calc_bic_aicc,calc_r2_press
 from .hierarchy import get_all_lower_order_terms
 
 def model_reduction(data: pd.DataFrame,
@@ -11,7 +12,7 @@ def model_reduction(data: pd.DataFrame,
                     term_types: Dict,
                     response: str,
                     key_stat: str = 'aicc',
-                    direction: str = 'forwards') -> ols:
+                    direction: str = 'forwards') -> OLS:
     '''
     Simplifies the model via model reduction.
 
@@ -44,7 +45,7 @@ def forward_model_reduction(data: pd.DataFrame,
                             terms_list: List,
                             term_types: Dict,
                             response: str,
-                            key_stat: str) -> ols:
+                            key_stat: str) -> OLS:
     '''
     Applies forward model reduction. Mainly a helper function for model_reduction.
 
@@ -108,7 +109,7 @@ def backward_model_reduction(data: pd.DataFrame,
                              terms_list: List,
                              term_types: Dict,
                              response: str,
-                             key_stat: str) -> ols:
+                             key_stat: str) -> OLS:
     
     '''
     Applies backwards model reduction. Mainly a helper function for model_reduction.
@@ -172,3 +173,82 @@ def backward_model_reduction(data: pd.DataFrame,
                                         response=response))
 
     return ols(formula=formula,data=df).fit()
+
+def auto_model_reduction(data: pd.DataFrame,
+                         terms_list: List,
+                         term_types: Dict,
+                         response: str,
+                         key_stat: str = 'aicc_bic',
+                         direction: str = 'forwards_backwards') -> Dict:
+    """
+    Automatically runs model reduction and selects the best model when comparing different statistics and directions.
+    Default is to check both aicc (forwards) vs aicc (backwards) vs bic (forwards) vs bic (backwards).
+    Comparisons are made with the following logic:
+    - if none have r2adj – r2press >= 0.2
+        o	return model with highest r2press
+        o	comment that none are good
+    - Order by r2adj and compare top 2. d_adj is the abs difference in R2adj and d_press is the abs difference in R2press
+        o if d_adj <= 0.05 and d_press <= 0.05
+             pick model with less terms
+        o elif d_adj <= 0.05 and d_press > 0.05
+             pick model with higher r2press
+        o elif d_adj > 0.05 and d_press <= 0.05
+             pick model with higher r2adj
+        o elif d_adj > 0.05 and d_press > 0.05
+             pick model with higher r2press
+
+    - if lambda == 1 is not in CI AND we find a better lambda
+        o repeat all above but with best lambda. Include this
+          (along with the best from the last analysis) to be exported
+
+    Args:
+        data (pd.DataFrame): df containing all the features, responses, and their respective values
+        terms_list (List): list containing all the terms of the largest model.
+        term_types (Dict): dict where the keys are the lowest-order terms and the values are either
+                           'Mixture' or 'Process'
+        response (str): the column name in data of the response to be modeled.
+        key_stat (str): statistic used to determine if a term will be added or not. can be
+                        'aicc' for the corrected Akeike Information Criterion,
+                        'bic' for the Bayesian Information Criterion,
+                        or 'aicc_bic' for both.
+        direction (str): direction of model reduction, 'forwards', 'backwards', or 'forwards_backwards'
+
+    Returns:
+        Dict: _description_
+    """
+
+    if key_stat == 'aicc':
+        key_stats = ['aicc']
+    elif key_stat == 'bic':
+        key_stats = ['bic']
+    elif key_stat == 'aicc_bic':
+        key_stats = ['aicc','bic']
+    else:
+        raise ValueError('key_stat can only be aicc, bic, or aicc_bic')
+    
+    if direction == 'forwards':
+        directions = ['forwards']
+    elif direction == 'backwards':
+        directions = ['backwards']
+    elif direction == 'forwards_backwards':
+        directions = ['forwards','backwards']
+    else:
+        raise ValueError('direction can only be forwards, backwards, or forwards_backwards')
+    
+    models, r2adjs, r2presses = {},{},{}
+    
+    for key_stat in key_stats:
+        models[key_stat] = {}
+        for direction in directions:
+            models[key_stat][direction] = model_reduction(data,
+                                                          terms_list,
+                                                          term_types,
+                                                          response,
+                                                          key_stat,
+                                                          direction
+                                                          )
+            r2adjs[key_stat][direction] = models[key_stat][direction].rsquared_adj
+            r2adjs[key_stat][direction] = calc_r2_press(models[key_stat][direction])
+    
+    
+    
