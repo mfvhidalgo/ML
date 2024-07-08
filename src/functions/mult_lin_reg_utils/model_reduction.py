@@ -2,10 +2,12 @@ from typing import List, Dict
 import pandas as pd
 from statsmodels.formula.api import ols
 from statsmodels.regression.linear_model import OLS
+from itertools import combinations
 
 from .terms import list_to_orders, list_to_formula
 from .statistics import calc_bic_aicc,calc_r2_press
 from .hierarchy import get_all_lower_order_terms
+from .power_transform import best_boxcox_lambda
 
 def model_reduction(data: pd.DataFrame,
                     terms_list: List,
@@ -28,7 +30,7 @@ def model_reduction(data: pd.DataFrame,
         direction (str): direction of model reduction, either 'forwards' or 'backwards'
     
     Returns:   
-        ols: the final reduced and fit model
+        OLS: the final reduced and fit model
     '''
 
     if key_stat != 'aicc' and key_stat != 'bic':
@@ -60,7 +62,7 @@ def forward_model_reduction(data: pd.DataFrame,
                         or 'bic' for the Bayesian Information Criterion
     
     Returns:   
-        ols: the final reduced and fit model
+        OLS: the final reduced and fit model
     '''
     df = data.copy()
     terms_by_order = list_to_orders(terms_list)
@@ -125,7 +127,7 @@ def backward_model_reduction(data: pd.DataFrame,
                         or 'bic' for the Bayesian Information Criterion
     
     Returns:   
-        ols: the final reduced and fit model
+        OLS: the final reduced and fit model
     '''
     
     df = data.copy()
@@ -174,18 +176,85 @@ def backward_model_reduction(data: pd.DataFrame,
 
     return ols(formula=formula,data=df).fit()
 
+def get_model_least_terms(data: pd.DataFrame,
+                            num_terms_name: str = 'num_terms') -> pd.DataFrame:
+    return data.sort_values(by=[num_terms_name],ascending=True).iloc[0,:].to_frame().T
+
+def get_highest_r2_simplest_model(data: pd.DataFrame,
+                                    r2_name: str = 'r2adj') -> pd.DataFrame:
+    df = data.loc[data[r2_name]==max(data[r2_name])]
+    return get_model_least_terms(df)
+
+def get_better_model(data: pd.DataFrame) -> pd.DataFrame:
+    if len(data) == 1:
+        return data
+    
+    if len(data) != 2:
+        raise ValueError('data does not have exactly 2 rows')
+    
+    best_df = data.loc[data['d_r2s'] <= 0.2].copy()
+    if len(best_df) == 0:
+        return get_highest_r2_simplest_model(data, r2_name = 'r2press')
+    
+    differences = abs(best_df[['r2adj','r2press','d_r2s']].diff().iloc[-1])
+    if (differences['r2adj'] <= 0.05) and (differences['r2press'] <= 0.05):
+        return get_model_least_terms(best_df)
+    if (differences['r2adj'] <= 0.05) and (differences['r2press'] > 0.05):
+        return get_highest_r2_simplest_model(best_df, r2_name = 'r2press')
+    if (differences['r2adj'] > 0.05) and (differences['r2press'] <= 0.05):
+        return get_highest_r2_simplest_model(best_df, r2_name = 'r2adj')
+    if (differences['r2adj'] > 0.05) and (differences['r2press'] > 0.05):
+        return get_highest_r2_simplest_model(best_df, r2_name = 'r2press')
+
+def round_robin_comparison(data: pd.DataFrame) -> pd.DataFrame:
+    df = data.copy()
+    win_counts = {}
+    for key_stat in df['key_stat']:
+        win_counts[key_stat] = 0
+    
+    for comb in combinations(df['key_stat'], 2):
+        df_key_stat = pd.concat([df.loc[df['key_stat']==comb[0]],
+                                    df.loc[df['key_stat']==comb[1]]])
+        best_model = get_better_model(df_key_stat)
+        if len(best_model) != 1:
+            raise ValueError('More than 1 best model?')
+        win_counts[best_model['key_stat'].values[0]] += 1
+    
+    best_key = max(win_counts, key=lambda k: win_counts[k])
+    return df.loc[df['key_stat']==best_key]
+
+def get_best_model(data: pd.DataFrame) -> pd.DataFrame:
+    df = data.copy()
+    
+    if len(df) == 1:
+        return df
+    
+    while len(df) != 1:
+        if len(set(df['key_stat'])) == len(df['key_stat']):
+            return round_robin_comparison(df)
+        
+        key_stats_list = list(set(df['key_stat']))
+        for key_stat in key_stats_list:
+            df_key_stat = df.loc[df['key_stat']==key_stat]
+            df = df.drop(df_key_stat.index)
+            df = pd.concat([df,get_better_model(df_key_stat)])
+    
+    return df
+
 def auto_model_reduction(data: pd.DataFrame,
                          terms_list: List,
                          term_types: Dict,
                          response: str,
                          key_stat: str = 'aicc_bic',
-                         direction: str = 'forwards_backwards') -> Dict:
+                         direction: str = 'forwards_backwards',
+                         lambdas: List = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2]) -> Dict:
     """
     Automatically runs model reduction and selects the best model when comparing different statistics and directions.
     Default is to check both aicc (forwards) vs aicc (backwards) vs bic (forwards) vs bic (backwards).
     Comparisons are made with the following logic:
     - if none have r2adj – r2press >= 0.2
         o	return model with highest r2press
+        o	if there are multiple candidates, pick the one simplest model
         o	comment that none are good
     - Order by r2adj and compare top 2. d_adj is the abs difference in R2adj and d_press is the abs difference in R2press
         o if d_adj <= 0.05 and d_press <= 0.05
@@ -212,6 +281,7 @@ def auto_model_reduction(data: pd.DataFrame,
                         'bic' for the Bayesian Information Criterion,
                         or 'aicc_bic' for both.
         direction (str): direction of model reduction, 'forwards', 'backwards', or 'forwards_backwards'
+        lambdas (List): values of lambda to try power transformations on
 
     Returns:
         Dict: _description_
@@ -235,20 +305,52 @@ def auto_model_reduction(data: pd.DataFrame,
     else:
         raise ValueError('direction can only be forwards, backwards, or forwards_backwards')
     
-    models, r2adjs, r2presses = {},{},{}
+    boxcox_info = best_boxcox_lambda(data,
+                                     list_to_formula(terms_list,term_types,response),
+                                     response,
+                                     lambdas
+                                     )
+
+    best_lambdas = [1]
+    if not(1 in boxcox_info['lambdas in conf int']):
+        best_lambdas.extend(boxcox_info['lambdas in conf int'])
     
-    for key_stat in key_stats:
-        models[key_stat] = {}
-        for direction in directions:
-            models[key_stat][direction] = model_reduction(data,
-                                                          terms_list,
-                                                          term_types,
-                                                          response,
-                                                          key_stat,
-                                                          direction
-                                                          )
-            r2adjs[key_stat][direction] = models[key_stat][direction].rsquared_adj
-            r2adjs[key_stat][direction] = calc_r2_press(models[key_stat][direction])
+    models,model_stats,best_models = {},{},{}
     
-    
-    
+    for lmbda in best_lambdas:
+        models[lmbda] = {}
+        r2adjs, r2presses, d_r2s, model_params = [],[],[], []
+        key_stats_list,directions_list = [],[]
+        for key_stat in key_stats:
+            models[lmbda][key_stat] = {}
+            for direction in directions:
+                models[lmbda][key_stat][direction] = model_reduction(data,
+                                                            terms_list,
+                                                            term_types,
+                                                            response,
+                                                            key_stat,
+                                                            direction
+                                                            )
+                r2press = calc_r2_press(models[lmbda][key_stat][direction])
+                r2adjs.append(models[lmbda][key_stat][direction].rsquared_adj)
+                r2presses.append(r2press)
+                d_r2s.append(abs(models[lmbda][key_stat][direction].rsquared_adj - r2press))
+                key_stats_list.append(key_stat)
+                directions_list.append(direction)
+                model_params.append(models[lmbda][key_stat][direction].params)
+        
+        model_stats[lmbda] = pd.DataFrame({'r2adj':r2adjs,
+                                            'r2press':r2presses,
+                                            'd_r2s':d_r2s,
+                                            'key_stat':key_stats_list,
+                                            'direction':directions_list,
+                                            'num_terms': [len(param) for param in model_params]
+                                            })
+        
+        model_terms = pd.concat(model_params,axis=1).T
+        model_stats[lmbda] = pd.concat([model_stats[lmbda],model_terms],axis=1)
+        best_models[lmbda] = get_best_model(model_stats[lmbda])
+
+    return {'models':models,
+            'model_stats':model_stats,
+            'best_models':best_models}
