@@ -178,14 +178,60 @@ def backward_model_reduction(data: pd.DataFrame,
 
 def get_model_least_terms(data: pd.DataFrame,
                             num_terms_name: str = 'num_terms') -> pd.DataFrame:
+    """
+    Helper function to return the row with the highest value of num_terms_name
+
+    Args:
+        data (pd.DataFrame): df containing r2adj, r2press, d_r2s(abs val of r2adj-r2press), key_stat, direction, num_terms
+        num_terms_name (str, optional): Column name containing the number of terms in the model. Defaults to 'num_terms'.
+
+    Returns:
+        pd.DataFrame: row with the highest value of num_terms_name
+    """
     return data.sort_values(by=[num_terms_name],ascending=True).iloc[0,:].to_frame().T
 
 def get_highest_r2_simplest_model(data: pd.DataFrame,
                                     r2_name: str = 'r2adj') -> pd.DataFrame:
+    """
+    Helper function to return the row with the highest value of r2_name
+
+    Args:
+        data (pd.DataFrame): df containing r2adj, r2press, d_r2s(abs val of r2adj-r2press), key_stat, direction, num_terms
+        r2_name (str, optional): column name of r2, usually either r2adj or r2press. Defaults to 'r2adj'.
+
+    Returns:
+        pd.DataFrame: row with the highest value of r2_name
+    """
     df = data.loc[data[r2_name]==max(data[r2_name])]
     return get_model_least_terms(df)
 
 def get_better_model(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compares two rows of data from models and returns the better model.
+    Comparisons are made with the following logic:
+        - if none have r2adj – r2press >= 0.2
+            o	return model with highest r2press
+            o	if there are multiple candidates, pick the one simplest model
+            o	comment that none are good
+        - Order by r2adj and compare top 2. d_adj is the abs difference in R2adj and d_press is the abs difference in R2press
+            o if d_adj <= 0.05 and d_press <= 0.05
+                 pick model with less terms
+            o elif d_adj <= 0.05 and d_press > 0.05
+                 pick model with higher r2press
+            o elif d_adj > 0.05 and d_press <= 0.05
+                 pick model with higher r2adj
+            o elif d_adj > 0.05 and d_press > 0.05
+                 pick model with higher r2press
+
+    Args:
+        data (pd.DataFrame): df containing r2adj, r2press, d_r2s(abs val of r2adj-r2press), key_stat, direction, num_terms
+
+    Raises:
+        ValueError: data must only have 2 rows, else raise this error
+
+    Returns:
+        pd.DataFrame: row from data of the best model based on the rules in get_better_model
+    """
     if len(data) == 1:
         return data
     
@@ -207,6 +253,17 @@ def get_better_model(data: pd.DataFrame) -> pd.DataFrame:
         return get_highest_r2_simplest_model(best_df, r2_name = 'r2press')
 
 def round_robin_comparison(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Helper function to find the best model when there are more than 2 models to compare.
+    Runs a round-robin-style comparison of every row of data and returns the row with the most
+    "wins" when implementing get_better_model
+
+    Args:
+        data (pd.DataFrame): df containing r2adj, r2press, d_r2s(abs val of r2adj-r2press), key_stat, direction, num_terms
+
+    Returns:
+        pd.DataFrame: row from data of the best model based on the rules in get_better_model
+    """
     df = data.copy()
     win_counts = {}
     for key_stat in df['key_stat']:
@@ -224,6 +281,15 @@ def round_robin_comparison(data: pd.DataFrame) -> pd.DataFrame:
     return df.loc[df['key_stat']==best_key]
 
 def get_best_model(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Wrapper for get_better_model which accepts more than 2 rows of data.
+
+    Args:
+        data (pd.DataFrame): df containing r2adj, r2press, d_r2s(abs val of r2adj-r2press), key_stat, direction, num_terms
+
+    Returns:
+        pd.DataFrame: row from data of the best model based on the rules in get_better_model
+    """
     df = data.copy()
     
     if len(df) == 1:
@@ -251,24 +317,7 @@ def auto_model_reduction(data: pd.DataFrame,
     """
     Automatically runs model reduction and selects the best model when comparing different statistics and directions.
     Default is to check both aicc (forwards) vs aicc (backwards) vs bic (forwards) vs bic (backwards).
-    Comparisons are made with the following logic:
-    - if none have r2adj – r2press >= 0.2
-        o	return model with highest r2press
-        o	if there are multiple candidates, pick the one simplest model
-        o	comment that none are good
-    - Order by r2adj and compare top 2. d_adj is the abs difference in R2adj and d_press is the abs difference in R2press
-        o if d_adj <= 0.05 and d_press <= 0.05
-             pick model with less terms
-        o elif d_adj <= 0.05 and d_press > 0.05
-             pick model with higher r2press
-        o elif d_adj > 0.05 and d_press <= 0.05
-             pick model with higher r2adj
-        o elif d_adj > 0.05 and d_press > 0.05
-             pick model with higher r2press
-
-    - if lambda == 1 is not in CI AND we find a better lambda
-        o repeat all above but with best lambda. Include this
-          (along with the best from the last analysis) to be exported
+    The specific criteria is based on the logic in get_better_model.
 
     Args:
         data (pd.DataFrame): df containing all the features, responses, and their respective values
@@ -284,7 +333,12 @@ def auto_model_reduction(data: pd.DataFrame,
         lambdas (List): values of lambda to try power transformations on
 
     Returns:
-        Dict: _description_
+        Dict: dict with keys of each lambda value tested. Afterwards, the keys are:
+        'models': keys are [key_stat] followed by [direction]. Contains statsmodels.ols models
+        'model_stats': df of key model statistics
+        'best_models': row in model_stats that has the best statistics
+        'boxcox_info': dict of boxcox parameters from best_boxcox_lambda
+              
     """
 
     if key_stat == 'aicc':
@@ -339,13 +393,14 @@ def auto_model_reduction(data: pd.DataFrame,
                 directions_list.append(direction)
                 model_params.append(models[lmbda][key_stat][direction].params)
         
-        model_stats[lmbda] = pd.DataFrame({'r2adj':r2adjs,
-                                            'r2press':r2presses,
-                                            'd_r2s':d_r2s,
-                                            'key_stat':key_stats_list,
-                                            'direction':directions_list,
-                                            'num_terms': [len(param) for param in model_params]
-                                            })
+        model_stats[lmbda] = pd.DataFrame({'response':[response]*len(r2adjs),
+                                           'r2adj':r2adjs,
+                                           'r2press':r2presses,
+                                           'd_r2s':d_r2s,
+                                           'key_stat':key_stats_list,
+                                           'direction':directions_list,
+                                           'num_terms': [len(param) for param in model_params]
+                                           })
         
         model_terms = pd.concat(model_params,axis=1).T
         model_stats[lmbda] = pd.concat([model_stats[lmbda],model_terms],axis=1)
@@ -353,4 +408,48 @@ def auto_model_reduction(data: pd.DataFrame,
 
     return {'models':models,
             'model_stats':model_stats,
-            'best_models':best_models}
+            'best_models':best_models,
+            'boxcox_info': boxcox_info}
+
+def encoded_models_to_real(r2_data: pd.DataFrame,
+                           term_types: Dict,
+                           response: str,
+                           real_data: pd.DataFrame,
+                           non_term_columns: List = ['response','r2adj','r2press','d_r2s','key_stat','direction','num_terms']) -> pd.DataFrame:
+    """
+    Helper function to convert the term coefficients from the model_stats and best_models outputs from auto_model_reduction
+    from encoded units to actual units.
+
+    Args:
+        r2_data (pd.DataFrame): the model_stats and best_models outputs from auto_model_reduction
+        term_types (Dict): dict where the keys are the lowest-order terms and the values are either
+                    'Mixture' or 'Process'
+        response (str): the column name in data of the response to be modeled.
+        real_data (pd.DataFrame): df containing the real data. Column names must be in encoded format (i.e. A, B, ...)
+        non_term_columns (List): list of column names in r2_data to ignore.
+                                 Defaults to ['response','r2adj','r2press','d_r2s','key_stat','direction','num_terms']
+                                 since these are the columns to ignore when using auto_model_reduction
+
+    Returns:
+        pd.DataFrame: same format as r2_data but the term coefficients are now in real units.
+    """
+    
+    df = r2_data.copy()
+    df_real = df[non_term_columns].copy()
+    df_terms = df.drop(non_term_columns,axis='columns')
+
+    for ind in df_terms.index:
+
+        terms_list = list(df_terms.loc[ind].dropna().index)
+        if 'Intercept' in terms_list:
+            terms_list.remove('Intercept')
+
+        model = ols(list_to_formula(terms_list,term_types,response),
+                    real_data).fit()
+
+        add_row = model.params.to_frame().T
+        add_row.index = [ind]
+
+        df_real = add_row.combine_first(df_real)
+    
+    return df_real

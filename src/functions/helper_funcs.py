@@ -28,7 +28,9 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
     data.columns = [col.translate(str.maketrans(replacements)) for col in data.columns]
     data.columns = [f'_{col}' if col[0].isdigit() else col for col in data.columns]
     design_parameters['Features'] = [row.translate(str.maketrans(replacements)) for row in design_parameters['Features']]
+    design_parameters['Features'] = [f'_{row}' if row[0].isdigit() else row for row in design_parameters['Features']]
     response_parameters.index = [row.translate(str.maketrans(replacements)) for row in response_parameters.index]
+    response_parameters.index = [f'_{row}' if row[0].isdigit() else row for row in response_parameters.index]
 
     # prepare dicts from Data.xlsx
     features = design_parameters['Features'].to_dict()
@@ -37,7 +39,6 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
             }
 
     term_types = design_parameters['Term type'].to_dict()
-    model_orders = response_parameters['Starting model type'].to_dict()
 
     responses = response_parameters.index
     lambdas = response_parameters['Lambda'].apply(get_lambdas)
@@ -56,7 +57,6 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
             'features':features,
             'levels':levels,
             'term_types':term_types,
-            'model_orders':model_orders,
             'responses':responses,
             'lambdas':lambdas,
             'rescalers':rescalers

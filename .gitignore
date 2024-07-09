@@ -1,9 +1,14 @@
 # Ignore all Jupyer checkpoints
 **/.ipynb_checkpoints/
 
+# Ignore all .vscode
+.vscode
+
 # Ignore all temporary files and folders
 ~$*.xlsx
 __pycache__
+src/Output
+
 
 # Ignore some temp doc files
 docs/ToDo.docx

@@ -14,7 +14,6 @@ response_parameters = data_xlsx['response_parameters']
 features = data_xlsx['features']
 levels = data_xlsx['levels']
 term_types = data_xlsx['term_types']
-model_orders = data_xlsx['model_orders']
 responses = data_xlsx['responses']
 lambdas = data_xlsx['lambdas']
 rescalers = data_xlsx['rescalers']
@@ -149,11 +148,58 @@ class TestTerms(unittest.TestCase):
         self.assertEqual(best_model['direction'].values[0], 'forwards')
         self.assertAlmostEqual(best_model['Intercept'].values[0], 162.787862,places=5)
         self.assertAlmostEqual(best_model['I(C ** 2)'].values[0], -0.505383,places=5)
-        self.assertCountEqual(list(best_model.columns),['r2adj', 'r2press', 'd_r2s',
+        self.assertCountEqual(list(best_model.columns),['response','r2adj', 'r2press', 'd_r2s',
                                                         'key_stat', 'direction',
                                                         'num_terms', 'Intercept',
                                                         'A', 'B', 'C', 'I(A ** 2)',
                                                         'A:B', 'I(C ** 2)'])
+    
+    def test_get_best_model(self):
+        df = pd.DataFrame({'r2adj':[0.9,0.7,0.99],'r2press':[0.1,0.2,-245],
+                    'd_r2s':[0.8,0.5,244.7],
+                    'key_stat':['aicc','aicc','bic'],
+                    'direction':['forwards','backwards','forwards'],
+                    'num_terms':[5,7,1]})
+        
+        best_model = model_reduction.get_best_model(df)
+        self.assertEqual(best_model['r2adj'].values[0], 0.7)
+        self.assertEqual(best_model['r2press'].values[0], 0.2)
+    
+    def test_encoded_models_to_real(self):
+        reduced_models = model_reduction.auto_model_reduction(data,
+                                                        ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
+                                                        term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                        response = response,
+                                                        key_stat = 'aicc_bic',
+                                                        direction ='forwards_backwards',
+                                                        lambdas = lambdas[response])
+        
+        lmbda = 1
+        df_best_models = reduced_models['best_models'][lmbda]
+        
+        features_reversed = {}
+        for key, value in features.items():
+            features_reversed[value] = key
+
+        real_data = data[list(features.values()) + list(responses)].copy()
+        real_data.columns = [features_reversed[val] for val in list(features.values())] + list(responses)
+        non_term_columns = ['response','r2adj','r2press','d_r2s','key_stat','direction','num_terms']
+        
+        df_best_models_real = model_reduction.encoded_models_to_real(df_best_models,
+                                                                    term_types,
+                                                                    response,
+                                                                    real_data,
+                                                                    non_term_columns)
+        
+        df_best_models_real = df_best_models_real.loc[df_best_models_real['key_stat']=='bic']
+        
+        self.assertAlmostEqual(df_best_models_real['A'].values[0], 0.0562,places=4)
+        self.assertAlmostEqual(df_best_models_real['A:B'].values[0], 0.035692,places=4)
+        self.assertAlmostEqual(df_best_models_real['I(A ** 2)'].values[0], -0.000747,places=6)
+        self.assertAlmostEqual(df_best_models_real['Intercept'].values[0], 157.933645,places=2)
+        self.assertAlmostEqual(df_best_models_real['r2adj'].values[0],
+                               reduced_models['models'][lmbda]['bic']['forwards'].rsquared_adj,
+                               places=3)
 
 if __name__ == '__main__':
     unittest.main()
