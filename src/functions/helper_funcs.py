@@ -2,6 +2,7 @@
 
 from typing import Dict
 import pandas as pd
+import os
 
 from .mult_lin_reg_utils.preprocessing import get_lambdas
 from .math_utils.rescale import rescale
@@ -61,3 +62,22 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
             'lambdas':lambdas,
             'rescalers':rescalers
     }
+
+def create_dir(new_folder_name: str,
+               new_folder_parent_dir: str
+               ) -> str:
+    """
+    Creates a dir if not yet available
+
+    Args:
+        new_folder_name (str): name of new folder to be made
+        new_folder_parent_dir (str): parent dir of the folder to be made
+
+    Returns:
+        str: path of new folder
+    """
+    new_dir = os.path.join(new_folder_parent_dir,new_folder_name)
+    if not(new_folder_name in os.listdir(new_folder_parent_dir)):
+        os.makedirs(new_dir)
+        
+    return new_dir

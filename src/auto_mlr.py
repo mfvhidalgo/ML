@@ -9,6 +9,7 @@ import functions.mult_lin_reg_utils as mlr_utils
 import functions.mult_lin_reg_utils.model_reduction as mod_red
 import functions.mult_lin_reg_utils.terms as terms
 import functions.math_utils as math_utils
+import functions.helper_funcs as helper_funcs
 from functions.helper_funcs import load_data_xlsx
 
 
@@ -18,12 +19,9 @@ try:
     src_dir = os.path.dirname(os.path.abspath(__file__))
 except:
     src_dir = os.getcwd()
-output_dir = os.path.join(src_dir,'Output')
-boxcox_dir = os.path.join(output_dir,'Box-Cox')
-if not('Output' in os.listdir(src_dir)):
-    os.makedirs(output_dir)
-if not('Box-Cox' in os.listdir(output_dir)):
-    os.makedirs(boxcox_dir)
+    
+output_dir = helper_funcs.create_dir('Output',src_dir)
+boxcox_dir = helper_funcs.create_dir('Box-Cox',output_dir)
     
 #%% load data
 
