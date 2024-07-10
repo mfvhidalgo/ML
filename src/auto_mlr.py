@@ -1,3 +1,7 @@
+#%% USER DEFINED INPUTS
+
+terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)']
+
 #%% import
 import pandas as pd
 from statsmodels.formula.api import ols
@@ -10,6 +14,7 @@ import functions.mult_lin_reg_utils.model_reduction as mod_red
 import functions.mult_lin_reg_utils.terms as terms
 import functions.math_utils as math_utils
 import functions.helper_funcs as helper_funcs
+import functions.evaluation as eval
 from functions.helper_funcs import load_data_xlsx
 
 
@@ -22,12 +27,14 @@ except:
     
 output_dir = helper_funcs.create_dir('Output',src_dir)
 boxcox_dir = helper_funcs.create_dir('Box-Cox',output_dir)
+pred_vs_act_dir = helper_funcs.create_dir('Pred vs Act',output_dir)
     
 #%% load data
 
 data_xlsx = load_data_xlsx(os.path.join(src_dir,'Data.xlsx'))
 
 data = data_xlsx['data']
+data_test = data_xlsx['data test']
 design_parameters = data_xlsx['design_parameters']
 response_parameters = data_xlsx['response_parameters']
 features = data_xlsx['features']
@@ -44,8 +51,8 @@ df_all_models,df_best_models = pd.DataFrame(),pd.DataFrame()
 
 for response in responses:
     reduced_models[response] = mod_red.auto_model_reduction(data,
-                                                            ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)'],
-                                                            term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                            terms_list,
+                                                            term_types = term_types,
                                                             response = response,
                                                             key_stat = 'aicc_bic',
                                                             direction ='forwards_backwards',
@@ -54,7 +61,7 @@ for response in responses:
     for lmbda in reduced_models[response]['model_stats'].keys():
         df_all_models = pd.concat([df_all_models,reduced_models[response]['model_stats'][lmbda]]).reset_index(drop=True)
         df_best_models = pd.concat([df_best_models,reduced_models[response]['best_models'][lmbda]]).reset_index(drop=True)
-        
+                
     fig = plt.figure(figsize=(5,5))
     ax = fig.add_subplot(111)
     df = reduced_models[response]['boxcox_info']
@@ -69,6 +76,24 @@ for response in responses:
 df_all_models = df_all_models.dropna(axis='columns',how='all')
 df_best_models = df_best_models.dropna(axis='columns',how='all')
 
+#%% predicted vs actual
+for _,row in df_best_models.iterrows():
+    lmbda = row['lambda']
+    key_stat = row['key_stat']
+    direction = row['direction']
+    response = row['response']
+    model = reduced_models[response]['models'][lmbda][key_stat][direction]
+    pred = model.get_prediction(data).summary_frame(alpha=0.05)
+    pred_test = model.get_prediction(data_test).summary_frame(alpha=0.05)
+    fig,ax = eval.pred_vs_act.plot_pred_vs_act(predicted_vals = pred['mean'],
+                                            actual_vals = data[response],
+                                            title = response,
+                                            predicted_vals_test = pred_test['mean'],
+                                            actual_vals_test = data_test[response]
+                                            )
+    plt.tight_layout()
+    fig.savefig(os.path.join(pred_vs_act_dir,f"{lmbda}_{response}.jpg"))
+
 #%% get models in real units
 
 features_reversed = {}
@@ -77,7 +102,7 @@ for key, value in features.items():
 
 real_data = data[list(features.values()) + list(responses)].copy()
 real_data.columns = [features_reversed[val] for val in list(features.values())] + list(responses)
-non_term_columns = ['response','r2adj','r2press','d_r2s','key_stat','direction','num_terms']
+non_term_columns = ['response','lambda','r2adj','r2press','d_r2s','key_stat','direction','num_terms']
 
 df_all_models_real,df_best_models_real = pd.DataFrame(),pd.DataFrame()
 for response in responses:
@@ -85,13 +110,13 @@ for response in responses:
     df_all_models_real = pd.concat([df_all_models_real,mod_red.encoded_models_to_real(df,
                                                                     term_types,
                                                                     response,real_data,
-                                                                    non_term_columns,)])
+                                                                    non_term_columns)])
     df_all_models_real = df_all_models_real.dropna(axis='columns',how='all')
     df = df_best_models.loc[df_best_models['response']==response]
     df_best_models_real = pd.concat([df_best_models_real,mod_red.encoded_models_to_real(df,
                                                                     term_types,
                                                                     response,real_data,
-                                                                    non_term_columns,)])
+                                                                    non_term_columns)])
     df_best_models_real = df_best_models_real.dropna(axis='columns',how='all')
 
 #%% export data

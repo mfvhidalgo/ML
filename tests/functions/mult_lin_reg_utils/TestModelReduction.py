@@ -148,7 +148,7 @@ class TestTerms(unittest.TestCase):
         self.assertEqual(best_model['direction'].values[0], 'forwards')
         self.assertAlmostEqual(best_model['Intercept'].values[0], 162.787862,places=5)
         self.assertAlmostEqual(best_model['I(C ** 2)'].values[0], -0.505383,places=5)
-        self.assertCountEqual(list(best_model.columns),['response','r2adj', 'r2press', 'd_r2s',
+        self.assertCountEqual(list(best_model.columns),['response','lambda','r2adj', 'r2press', 'd_r2s',
                                                         'key_stat', 'direction',
                                                         'num_terms', 'Intercept',
                                                         'A', 'B', 'C', 'I(A ** 2)',
@@ -183,7 +183,7 @@ class TestTerms(unittest.TestCase):
 
         real_data = data[list(features.values()) + list(responses)].copy()
         real_data.columns = [features_reversed[val] for val in list(features.values())] + list(responses)
-        non_term_columns = ['response','r2adj','r2press','d_r2s','key_stat','direction','num_terms']
+        non_term_columns = ['response','lambda','r2adj','r2press','d_r2s','key_stat','direction','num_terms']
         
         df_best_models_real = model_reduction.encoded_models_to_real(df_best_models,
                                                                     term_types,

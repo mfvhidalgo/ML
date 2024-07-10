@@ -9,9 +9,22 @@ def plot_pred_vs_act(predicted_vals: Union[List, pd.Series],
                      title: str = '',
                      predicted_vals_test: Union[List, pd.Series] = [],
                      actual_vals_test: Union[List, pd.Series] = [],
-                     ):
+                     ) -> List:
+    """
+    Wrapper function to quickly make a predicted vs actual plots
+
+    Args:
+        predicted_vals (Union[List, pd.Series]): predicted values
+        actual_vals (Union[List, pd.Series]): actual values
+        title (str, optional): title of the plot, usually response or the model used. Defaults to ''.
+        predicted_vals_test (Union[List, pd.Series], optional): predicted values from the validation set. Defaults to [].
+        actual_vals_test (Union[List, pd.Series], optional): actual values from the validation set. Defaults to [].
+
+    Returns:
+        List: [fig, ax] objects
+    """
     
-    fig = plt.figure(figsize=(5,5))
+    fig = plt.figure(figsize=(7.5,5))
     ax = fig.add_subplot(111)
     ax.scatter(actual_vals,predicted_vals,c='lightgrey')
     try:

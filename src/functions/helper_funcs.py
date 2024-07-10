@@ -20,7 +20,8 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
         Dict: dict of each key value to be imported
     '''
     # load data from Data.xlsx
-    data = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Data')
+    data = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Train Data')
+    data_test = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Test Data')
     design_parameters = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Design Parameters').set_index('Code')
     response_parameters = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Responses').set_index('Response')
 
@@ -28,6 +29,11 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
     replacements = {' ':'','(':'',')':'','-':'','+':'','*':'','/':''}
     data.columns = [col.translate(str.maketrans(replacements)) for col in data.columns]
     data.columns = [f'_{col}' if col[0].isdigit() else col for col in data.columns]
+    try:
+        data_test.columns = [col.translate(str.maketrans(replacements)) for col in data_test.columns]
+        data_test.columns = [f'_{col}' if col[0].isdigit() else col for col in data_test.columns]
+    except:
+        pass
     design_parameters['Features'] = [row.translate(str.maketrans(replacements)) for row in design_parameters['Features']]
     design_parameters['Features'] = [f'_{row}' if row[0].isdigit() else row for row in design_parameters['Features']]
     response_parameters.index = [row.translate(str.maketrans(replacements)) for row in response_parameters.index]
@@ -51,8 +57,13 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
                                             levels['max'][feature_coded],
                                             -1,1)
         data[feature_coded] = rescalers[feature_coded].transform(data[feature])
+        try:
+            data_test[feature_coded] = rescalers[feature_coded].transform(data_test[feature])
+        except:
+            pass
 
     return {'data':data,
+            'data test':data_test,
             'design_parameters':design_parameters,
             'response_parameters':response_parameters,
             'features':features,

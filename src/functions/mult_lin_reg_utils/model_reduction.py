@@ -373,7 +373,7 @@ def auto_model_reduction(data: pd.DataFrame,
     
     for lmbda in best_lambdas:
         models[lmbda] = {}
-        r2adjs, r2presses, d_r2s, model_params = [],[],[], []
+        r2adjs, r2presses, d_r2s, model_params,lambda_list = [],[],[],[],[]
         key_stats_list,directions_list = [],[]
         for key_stat in key_stats:
             models[lmbda][key_stat] = {}
@@ -392,8 +392,10 @@ def auto_model_reduction(data: pd.DataFrame,
                 key_stats_list.append(key_stat)
                 directions_list.append(direction)
                 model_params.append(models[lmbda][key_stat][direction].params)
+                lambda_list.append(lmbda)
         
         model_stats[lmbda] = pd.DataFrame({'response':[response]*len(r2adjs),
+                                           'lambda':lambda_list,
                                            'r2adj':r2adjs,
                                            'r2press':r2presses,
                                            'd_r2s':d_r2s,
@@ -415,7 +417,7 @@ def encoded_models_to_real(r2_data: pd.DataFrame,
                            term_types: Dict,
                            response: str,
                            real_data: pd.DataFrame,
-                           non_term_columns: List = ['response','r2adj','r2press','d_r2s','key_stat','direction','num_terms']) -> pd.DataFrame:
+                           non_term_columns: List = ['response','lambda','r2adj','r2press','d_r2s','key_stat','direction','num_terms']) -> pd.DataFrame:
     """
     Helper function to convert the term coefficients from the model_stats and best_models outputs from auto_model_reduction
     from encoded units to actual units.
