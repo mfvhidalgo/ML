@@ -4,6 +4,10 @@
 # Ignore all .vscode
 .vscode
 
+# Ignore env
+env
+.venv
+
 # Ignore all temporary files and folders
 ~$*.xlsx
 __pycache__

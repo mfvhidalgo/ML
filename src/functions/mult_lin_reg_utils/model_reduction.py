@@ -7,7 +7,7 @@ from itertools import combinations
 from .terms import list_to_orders, list_to_formula
 from .statistics import calc_bic_aicc,calc_r2_press
 from .hierarchy import get_all_lower_order_terms
-from .power_transform import best_boxcox_lambda
+from .power_transform import best_boxcox_lambda, box_cox_transform
 
 def model_reduction(data: pd.DataFrame,
                     terms_list: List,
@@ -378,7 +378,9 @@ def auto_model_reduction(data: pd.DataFrame,
         for key_stat in key_stats:
             models[lmbda][key_stat] = {}
             for direction in directions:
-                models[lmbda][key_stat][direction] = model_reduction(data,
+                df = data.copy()
+                df[response] = box_cox_transform(df[response],lmbda)
+                models[lmbda][key_stat][direction] = model_reduction(df,
                                                             terms_list,
                                                             term_types,
                                                             response,

@@ -15,6 +15,7 @@ import functions.mult_lin_reg_utils.terms as terms
 import functions.math_utils as math_utils
 import functions.helper_funcs as helper_funcs
 import functions.evaluation as eval
+import functions.mult_lin_reg_utils.power_transform as power_transform
 from functions.helper_funcs import load_data_xlsx
 
 
@@ -85,10 +86,12 @@ for _,row in df_best_models.iterrows():
     model = reduced_models[response]['models'][lmbda][key_stat][direction]
     pred = model.get_prediction(data).summary_frame(alpha=0.05)
     pred_test = model.get_prediction(data_test).summary_frame(alpha=0.05)
-    fig,ax = eval.pred_vs_act.plot_pred_vs_act(predicted_vals = pred['mean'],
+    pred_vals = power_transform.box_cox_transform(pred['mean'],lmbda,reverse=True)
+    pred_vals_test = power_transform.box_cox_transform(pred_test['mean'],lmbda,reverse=True)
+    fig,ax = eval.pred_vs_act.plot_pred_vs_act(predicted_vals = pred_vals,
                                             actual_vals = data[response],
                                             title = response,
-                                            predicted_vals_test = pred_test['mean'],
+                                            predicted_vals_test = pred_vals_test,
                                             actual_vals_test = data_test[response]
                                             )
     plt.tight_layout()
@@ -126,3 +129,7 @@ with pd.ExcelWriter(os.path.join(output_dir,f"Models summary.xlsx")) as writer:
     df_best_models.to_excel(writer, sheet_name='best models')
     df_all_models_real[df_all_models.columns].to_excel(writer, sheet_name='all models in real units')
     df_best_models_real[df_best_models.columns].to_excel(writer, sheet_name='best models in real units')
+
+#%% Misc info
+
+__version__ = 0.1
