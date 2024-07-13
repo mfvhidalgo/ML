@@ -15,8 +15,10 @@ def best_boxcox_lambda(df_input: pd.DataFrame,
     '''
     Finds the best lambda for Box-Cox transformations. Note that the complete power transform
     is used to find the best lambda (including the use of a geometric mean), but we prefer to 
-    use the simpler lambda transform for the final modelling. This is how it is implemended in
-    Design Expert, so we will follow this convention.
+    use the simpler lambda transform for the final modelling with box_cox_transform.
+    This is because: (1) the best_boxcox_lambda is a statistical analysis/transformation
+    while the box_cox_transform is a scientific/physical transformation, and
+    (2) we do not know the geometric mean when doing a reverse box_cox_transform, so we skip it
 
     Parameters:
         df_input (pd.DataFrame): pandas DataFrame containing the data of the features and responses
@@ -71,9 +73,10 @@ def box_cox_transform(series_input: pd.Series,
     '''
     Power transform based on Box-Cox transformation. A custom implementaton is needed
     because this functon is slightly different from sklearn's power_transform.
-    Specifically, the Box-Cox transformation is normally calculated as (x**lmbda - 1) / lmbda.
-    However, DesignExpert calculates it as (x**lmbda).
-    We follow the DesignExpert implementation because that is what is used as a reference for this script.
+    Specifically, the Box-Cox transformation is normally calculated as (y**lmbda - 1) / lmbda.
+    However, this implementation calculates it as (y**lmbda), since we view this as a
+    "scientific" power transformation. For example, if the response is time and lmbda == -1,
+    time**-1 is just rate, meaning we are still modeling something which has physical meaning.
 
     Parameters:
         data (pd.Series): pandas Series containing the response

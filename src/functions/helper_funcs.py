@@ -26,7 +26,7 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
     response_parameters = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Responses').set_index('Response')
 
     # remove spaces and parentheses from the feature and response names
-    replacements = {' ':'','(':'',')':'','-':'','+':'','*':'','/':''}
+    replacements = {' ':'','(':'',')':'','-':'','+':'','*':'','/':'','°':''}
     data.columns = [col.translate(str.maketrans(replacements)) for col in data.columns]
     data.columns = [f'_{col}' if col[0].isdigit() else col for col in data.columns]
     try:
@@ -41,32 +41,54 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
 
     # prepare dicts from Data.xlsx
     features = design_parameters['Features'].to_dict()
-    levels = {'min': design_parameters['Min Level'].to_dict(),
-            'max': design_parameters['Max Level'].to_dict()
-            }
+    feature_types = design_parameters['Feature type'].to_dict()
+    for code,feature_type in feature_types.items():
+        if (feature_type != 'Numerical') and (feature_type != 'Categorical'):
+            raise ValueError('Feature type must be either Numerical or Categorical')
+        data[features[code]] = data[features[code]].astype(float if feature_type == 'Numerical' else str)
 
-    term_types = design_parameters['Term type'].to_dict()
+    numerical_features = [feat for feat in feature_types.keys() if feature_types[feat] == 'Numerical']
+    categorical_features = [feat for feat in feature_types.keys() if feature_types[feat] == 'Categorical']
+    design_parameters.loc[design_parameters.index.isin(categorical_features)]
+
+    levels = {}
+    for feat in numerical_features:
+        levels[feat] = list(design_parameters.loc[feat,'Min Level':'Max Level'].values)
+    for feat in categorical_features:
+        levels[feat] = data[features[feat]].unique()
+
+    term_types = {}   
+    for feat in numerical_features:
+        term_types[feat] = design_parameters.loc[feat,'Term type']
+    for feat in categorical_features:
+        term_types[feat] = 'Process'
 
     responses = response_parameters.index
     lambdas = response_parameters['Lambda'].apply(get_lambdas)
 
     # encode features
     rescalers = {}
-    for feature_coded,feature in zip(features.keys(),features.values()):
-        rescalers[feature_coded] = rescale(levels['min'][feature_coded],
-                                            levels['max'][feature_coded],
+    for feature_coded in numerical_features:
+        feature = features[feature_coded]
+        rescalers[feature_coded] = rescale(levels[feature_coded][0],
+                                            levels[feature_coded][1],
                                             -1,1)
         data[feature_coded] = rescalers[feature_coded].transform(data[feature])
-        try:
+        if not(data_test.empty):
             data_test[feature_coded] = rescalers[feature_coded].transform(data_test[feature])
-        except:
-            pass
+
+    for feature_coded in categorical_features:
+        feature = features[feature_coded]
+        data[feature_coded] = data[feature]
+        if not(data_test.empty):
+            data_test[feature_coded] = data_test[feature]
 
     return {'data':data,
             'data test':data_test,
             'design_parameters':design_parameters,
             'response_parameters':response_parameters,
             'features':features,
+            'feature types':feature_types,
             'levels':levels,
             'term_types':term_types,
             'responses':responses,

@@ -4,7 +4,7 @@ from statsmodels.formula.api import ols
 from statsmodels.regression.linear_model import OLS
 from itertools import combinations
 
-from .terms import list_to_orders, list_to_formula
+from .terms import list_to_orders, list_to_formula, patsy_to_list
 from .statistics import calc_bic_aicc,calc_r2_press
 from .hierarchy import get_all_lower_order_terms
 from .power_transform import best_boxcox_lambda, box_cox_transform
@@ -242,6 +242,9 @@ def get_better_model(data: pd.DataFrame) -> pd.DataFrame:
     if len(best_df) == 0:
         return get_highest_r2_simplest_model(data, r2_name = 'r2press')
     
+    if len(best_df) == 1:
+        return best_df
+    
     differences = abs(best_df[['r2adj','r2press','d_r2s']].diff().iloc[-1])
     if (differences['r2adj'] <= 0.05) and (differences['r2press'] <= 0.05):
         return get_model_least_terms(best_df)
@@ -274,7 +277,7 @@ def round_robin_comparison(data: pd.DataFrame) -> pd.DataFrame:
                                     df.loc[df['key_stat']==comb[1]]])
         best_model = get_better_model(df_key_stat)
         if len(best_model) != 1:
-            raise ValueError('More than 1 best model?')
+            raise ValueError('Number of best model returned != 1')
         win_counts[best_model['key_stat'].values[0]] += 1
     
     best_key = max(win_counts, key=lambda k: win_counts[k])
@@ -373,7 +376,7 @@ def auto_model_reduction(data: pd.DataFrame,
     
     for lmbda in best_lambdas:
         models[lmbda] = {}
-        r2adjs, r2presses, d_r2s, model_params,lambda_list = [],[],[],[],[]
+        r2adjs, r2presses, d_r2s, model_params,lambda_list,formulas = [],[],[],[],[],[]
         key_stats_list,directions_list = [],[]
         for key_stat in key_stats:
             models[lmbda][key_stat] = {}
@@ -395,6 +398,7 @@ def auto_model_reduction(data: pd.DataFrame,
                 directions_list.append(direction)
                 model_params.append(models[lmbda][key_stat][direction].params)
                 lambda_list.append(lmbda)
+                formulas.append(models[lmbda][key_stat][direction].model.formula)
         
         model_stats[lmbda] = pd.DataFrame({'response':[response]*len(r2adjs),
                                            'lambda':lambda_list,
@@ -403,7 +407,8 @@ def auto_model_reduction(data: pd.DataFrame,
                                            'd_r2s':d_r2s,
                                            'key_stat':key_stats_list,
                                            'direction':directions_list,
-                                           'num_terms': [len(param) for param in model_params]
+                                           'num_terms': [len(param) for param in model_params],
+                                           'formulas':formulas
                                            })
         
         model_terms = pd.concat(model_params,axis=1).T
@@ -419,7 +424,8 @@ def encoded_models_to_real(r2_data: pd.DataFrame,
                            term_types: Dict,
                            response: str,
                            real_data: pd.DataFrame,
-                           non_term_columns: List = ['response','lambda','r2adj','r2press','d_r2s','key_stat','direction','num_terms']) -> pd.DataFrame:
+                           non_term_columns: List = ['response','lambda','r2adj','r2press','d_r2s','key_stat','direction','num_terms'],
+                           formulas_col: str = 'formulas') -> pd.DataFrame:
     """
     Helper function to convert the term coefficients from the model_stats and best_models outputs from auto_model_reduction
     from encoded units to actual units.
@@ -439,14 +445,15 @@ def encoded_models_to_real(r2_data: pd.DataFrame,
     """
     
     df = r2_data.copy()
-    df_real = df[non_term_columns].copy()
-    df_terms = df.drop(non_term_columns,axis='columns')
+    df_real = df.copy()
 
-    for ind in df_terms.index:
-
-        terms_list = list(df_terms.loc[ind].dropna().index)
-        if 'Intercept' in terms_list:
-            terms_list.remove('Intercept')
+    for ind,row in df.iterrows():
+        
+        terms_list = patsy_to_list(row[formulas_col])
+        if '-1' in terms_list:
+            terms_list.remove('-1')
+            if not('Mixture' in list(term_types.values())):
+                raise ValueError('patsy formula suggests that the model is a mixture model but none of the terms are mixture terms')
 
         model = ols(list_to_formula(terms_list,term_types,response),
                     real_data).fit()

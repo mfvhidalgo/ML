@@ -4,7 +4,7 @@ from statsmodels.formula.api import ols
 from statsmodels.regression.linear_model import OLS
 import numpy as np
 
-from .terms import list_to_formula
+from .terms import list_to_formula, patsy_to_list
 
 def calc_bic_aicc(model: OLS,
                   key_stat: str = 'aicc') -> float:
@@ -49,7 +49,8 @@ def calc_r2_press(model: OLS) -> float:
         removed_row = df.loc[removed_exp_num]
         remaining_df = df.drop(index=removed_exp_num)
         model_after_removal = ols(model.model.formula, data=remaining_df).fit()
-        removed_resp_pred = model_after_removal.predict(removed_row).values[0]
+        removed_resp_pred = model_after_removal.predict(df).loc[removed_exp_num]
+        #removed_resp_pred = model_after_removal.predict(removed_row).values[0] replaced bec could not run predict with a df of 1 row and categorical terms
         removed_resp_actual = removed_row[model.model.endog_names]
         SS = (removed_resp_pred - removed_resp_actual)**2
         PRESS += SS

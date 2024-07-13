@@ -88,6 +88,10 @@ def get_base_exponent(term_str: str) -> List:
             base_term,exponent = term_str[2:-1].split('**')
             exponent = float(exponent)
         
+        if '[T.' in term_str:
+            base_term = term_str.split('[T.')[0]
+            base_term = 1
+        
         if int(exponent) == exponent: # remove float exponents if exponent is basically an int. useful for later when removing duplicates
             exponent = int(exponent)
 
@@ -233,3 +237,12 @@ def list_to_orders(terms_list: List) -> Dict:
         terms[order].append(term)
     
     return terms
+
+def patsy_to_list(formula:str):
+    right_hand_side = formula[formula.index('~')+1:]
+    if '-' in right_hand_side:
+        right_hand_side = right_hand_side.split('-')[0]
+        terms = right_hand_side.split('+')
+        terms.append('-1')
+        return terms
+    return right_hand_side.split('+')
