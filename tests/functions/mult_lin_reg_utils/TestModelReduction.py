@@ -1,6 +1,7 @@
 # python -m tests.functions.mult_lin_reg_utils.TestModelReduction
 import unittest
 import pandas as pd
+import os
 
 import src.functions.mult_lin_reg_utils.model_reduction as model_reduction
 from src.functions.helper_funcs import load_data_xlsx
@@ -21,6 +22,19 @@ rescalers = data_xlsx['rescalers']
 response = 'C56mAhg'
 
 terms_list = ['A','B','C','A:B','I(A**2)','I(C**2)']
+
+data_xlsx_cat = load_data_xlsx('tests//functions//mult_lin_reg_utils//Datacat.xlsx')
+data_cat = data_xlsx_cat['data']
+design_parameters_cat = data_xlsx_cat['design_parameters']
+response_parameters_cat = data_xlsx_cat['response_parameters']
+features_cat = data_xlsx_cat['features']
+levels_cat = data_xlsx_cat['levels']
+term_types_cat = data_xlsx_cat['term_types']
+responses_cat = data_xlsx_cat['responses']
+lambdas_cat = data_xlsx_cat['lambdas']
+rescalers_cat = data_xlsx_cat['rescalers']
+
+terms_list_cat = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)']
 
 class TestTerms(unittest.TestCase):
     def test_forward_model_reduction(self):
@@ -150,10 +164,27 @@ class TestTerms(unittest.TestCase):
         self.assertAlmostEqual(best_model['I(C ** 2)'].values[0], -0.505383,places=5)
         self.assertCountEqual(list(best_model.columns),['response','lambda','r2adj', 'r2press', 'd_r2s',
                                                         'key_stat', 'direction',
-                                                        'num_terms', 'Intercept',
+                                                        'num_terms','formulas', 'Intercept',
                                                         'A', 'B', 'C', 'I(A ** 2)',
                                                         'A:B', 'I(C ** 2)'])
-    
+        
+        # categorical
+        reduced_models = model_reduction.auto_model_reduction(data_cat,
+                                                        terms_list_cat,
+                                                        term_types = {'A':'Process','B':'Process','C':'Process'},
+                                                        response = response,
+                                                        key_stat = 'bic',
+                                                        direction ='forwards_backwards',
+                                                        lambdas = lambdas[response])
+        best_model = reduced_models['best_models'][1]
+        self.assertAlmostEqual(best_model.loc[0,'r2adj'],0.7255190104805536,places=5)
+        self.assertAlmostEqual(best_model.loc[0,'r2press'],0.510058,places=5)
+        self.assertAlmostEqual(best_model.loc[0,'A:B[T.low]'],-0.675102,places=5)
+        self.assertCountEqual(best_model.columns,
+                              ['response', 'lambda', 'r2adj', 'r2press', 'd_r2s', 'key_stat',
+                                'direction', 'num_terms', 'formulas', 'Intercept', 'B[T.low]',
+                                'C[T.low]', 'C[T.mid]', 'A', 'A:B[T.low]', 'I(A ** 2)'])
+        
     def test_get_best_model(self):
         df = pd.DataFrame({'r2adj':[0.9,0.7,0.99],'r2press':[0.1,0.2,-245],
                     'd_r2s':[0.8,0.5,244.7],
