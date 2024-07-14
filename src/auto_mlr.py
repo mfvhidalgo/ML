@@ -1,6 +1,5 @@
 #%% USER DEFINED INPUTS
 
-#terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(C**2)']
 terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)']
 
 #%% import
@@ -133,4 +132,4 @@ with pd.ExcelWriter(os.path.join(output_dir,f"Models summary.xlsx")) as writer:
 
 #%% Misc info
 
-__version__ = 0.1
+__version__ = 0.2

@@ -1,5 +1,9 @@
 # ML
 
+## Versions
+
+Currently v.0.2. Refer to CHANGELOG.md for a details.
+
 ## Description
 
 Scripts to streamline the ML fitting process. Currently focuses mainly on multiple linear regression applied from a Design of Experiments perspective.
@@ -50,7 +54,6 @@ Data should first be entered into Data.xlsx. Afterwards, specific ML scripts can
 
 ### Features
 
-* implement categorical features and responses into MLR
 * implement logistic regression
 * implement RF, XGBoost, NN
 
