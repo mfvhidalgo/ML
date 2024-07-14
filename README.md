@@ -52,16 +52,7 @@ Data should first be entered into Data.xlsx. Afterwards, specific ML scripts can
 
 ## Upcoming features
 
-### Features
-
-* implement logistic regression
-* implement RF, XGBoost, NN
-
-### Guides
-
-* guide for using Data.xlsx.
-* guide for using auto_mlr
-* guide for using functions\mult_lin_reg_utils
+Refer to docs\plans_and_issues.md.
 
 ## Authors
 

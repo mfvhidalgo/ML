@@ -23,6 +23,9 @@
 
 ## mult_lin_reg_utils
 
+* [0.2.1] - 2024-Jul-14 #WIP
+    * added VIF and power calculations via functions.mult_lin_reg_utils.statistics.evaluate_data
+
 * [0.2] - 2024-Jul-13
     * can now use categorical features
     * model_reduction

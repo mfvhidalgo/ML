@@ -239,7 +239,10 @@ def list_to_orders(terms_list: List) -> Dict:
     return terms
 
 def patsy_to_list(formula:str):
-    right_hand_side = formula[formula.index('~')+1:]
+    if '~' in formula:
+        right_hand_side = formula[formula.index('~')+1:]
+    else:
+        right_hand_side = formula
     if '-' in right_hand_side:
         right_hand_side = right_hand_side.split('-')[0]
         terms = right_hand_side.split('+')
