@@ -1,6 +1,6 @@
 #%% USER DEFINED INPUTS
 
-terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)']
+terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(B**2)']
 
 #%% import
 import pandas as pd
