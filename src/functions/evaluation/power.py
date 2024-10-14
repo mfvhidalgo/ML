@@ -49,9 +49,21 @@ def est_signal_to_noise(design: pd.DataFrame,
 
 def get_power(design: pd.DataFrame,
               model: str,
-              signal_to_noise: str,
+              signal_to_noise: float,
               alpha: float = 0.05,
               ) -> List[List[str]]:
+    """
+    Wrapper for dexpy's power function
+
+    Args:
+        design (pd.DataFrame): Pandas df of features scaled to -1,1
+        model (str): model in patsy format
+        signal_to_noise (float): signal-to-noise ratio
+        alpha (float, optional): significance level. Defaults to 0.05.
+
+    Returns:
+        List[List[str]]: two lists, first of the term names and the second are the power values
+    """
     X = dmatrix(model, design)
     terms = X.design_info.describe().split(' + ')
     powers = dexpy.power.f_power(model, design, signal_to_noise, alpha)
