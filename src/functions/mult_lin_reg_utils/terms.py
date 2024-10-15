@@ -81,8 +81,8 @@ def get_base_exponent(term_str: str) -> List:
         base_term,exponent = term_str,1
         if 'np.power(' in term_str:
             comma_index = term_str.index(',')
-            base_term = term_str[9:comma_index]
-            exponent = float(term_str[comma_index+1:-1])
+            base_term = term_str[11:comma_index]
+            exponent = float(term_str[comma_index+1:-2])
 
         if '**' in term_str:
             base_term,exponent = term_str[2:-1].split('**')
