@@ -1,6 +1,6 @@
 #%% USER DEFINED INPUTS
 
-terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(B**2)']
+terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(B**2)', 'I(C**2)', 'I(A**3)','I(A**2):I(B**2)', 'I(A**2):I(C**2)',]
 
 #%% import
 import pandas as pd
@@ -51,7 +51,9 @@ reduced_models = {}
 df_all_models,df_best_models = pd.DataFrame(),pd.DataFrame()
 
 for response in responses:
-    reduced_models[response] = mod_red.auto_model_reduction(data,
+    columns = list(term_types.keys())+[response]
+    select_data = data[columns].dropna() # only doing .dropna() after selecting the features and responses is preferred over running .dropna() on the complete dataset because some experiments have missing values at different locations
+    reduced_models[response] = mod_red.auto_model_reduction(select_data,
                                                             terms_list,
                                                             term_types = term_types,
                                                             response = response,
@@ -79,20 +81,24 @@ df_best_models = df_best_models.dropna(axis='columns',how='all')
 
 #%% predicted vs actual
 for _,row in df_best_models.iterrows():
+
+    columns = list(term_types.keys())+[response]
+    select_data_test = data_test[columns].dropna()
+
     lmbda = row['lambda']
     key_stat = row['key_stat']
     direction = row['direction']
     response = row['response']
     model = reduced_models[response]['models'][lmbda][key_stat][direction]
     pred = model.get_prediction(data).summary_frame(alpha=0.05)
-    pred_test = model.get_prediction(data_test).summary_frame(alpha=0.05)
+    pred_test = model.get_prediction(select_data_test).summary_frame(alpha=0.05)
     pred_vals = power_transform.box_cox_transform(pred['mean'],lmbda,reverse=True)
     pred_vals_test = power_transform.box_cox_transform(pred_test['mean'],lmbda,reverse=True)
     fig,ax = eval.pred_vs_act.plot_pred_vs_act(predicted_vals = pred_vals,
                                             actual_vals = data[response],
                                             title = response,
                                             predicted_vals_test = pred_vals_test,
-                                            actual_vals_test = data_test[response]
+                                            actual_vals_test = select_data_test[response]
                                             )
     plt.tight_layout()
     fig.savefig(os.path.join(pred_vs_act_dir,f"{lmbda}_{response}.jpg"))

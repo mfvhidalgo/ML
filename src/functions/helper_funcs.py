@@ -26,7 +26,7 @@ def load_data_xlsx(data_xlsx_file_loc: str) -> Dict:
     response_parameters = pd.read_excel(data_xlsx_file_loc, sheet_name = 'Responses').set_index('Response')
 
     # remove spaces and parentheses from the feature and response names
-    replacements = {' ':'','(':'',')':'','-':'','+':'','*':'','/':'','°':''}
+    replacements = {' ':'','(':'',')':'','-':'','+':'','*':'','/':'','°':'','@':'','%':''}
     data.columns = [col.translate(str.maketrans(replacements)) for col in data.columns]
     data.columns = [f'_{col}' if col[0].isdigit() else col for col in data.columns]
     try:
