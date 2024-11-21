@@ -2,13 +2,14 @@ import pandas as pd
 import patsy
 import numpy as np
 import seaborn as sns
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from typing import Dict
 from scipy.optimize import fsolve
 import dexpy.power
 import dexpy.alias
 from patsy import dmatrix
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+import matplotlib.pyplot as plt
 
 def evaluate_design(design: pd.DataFrame,
                     formula: str,
@@ -44,6 +45,9 @@ def evaluate_design(design: pd.DataFrame,
     unaliased_formula_list = [term for term in formula_list if not(term in alias_terms)]
     unaliased_formula = '+'.join(unaliased_formula_list)
 
+    if len(unaliased_formula) == 0:
+        raise AttributeError('The design is too aliased. Please reduce model complexity.')
+
     # calculate power and vif and combine to a single df    
     power = calculate_power(design=design,formula=unaliased_formula,signal_to_noise=signal_to_noise,alpha=alpha)
     power.set_index('Term', inplace=True)
@@ -75,6 +79,7 @@ def calculate_covariance_matrix(design: pd.DataFrame,
 
     covariance_matrix = np.cov(X, rowvar=False)
     covariance_df = pd.DataFrame(covariance_matrix,index=X.columns,columns=X.columns)
+    covariance_df = covariance_df.map(_round)
 
     return covariance_df
 
@@ -96,6 +101,7 @@ def calculate_correlation_matrix(design: pd.DataFrame,
 
     correlation_matrix = np.corrcoef(X, rowvar=False)
     correlation_df = pd.DataFrame(correlation_matrix,index=X.columns,columns=X.columns)
+    correlation_df = correlation_df.map(_round)
 
     return correlation_df
 
@@ -109,12 +115,16 @@ def plot_matrix_heatmap(df: pd.DataFrame,
     """
 
     if cmap_colors:
-        colors = [(key, val) for key,val in cmap_colors.items()]
+        vmin, vmax = min(cmap_colors.keys()), max(cmap_colors.keys())
+        norm = Normalize(vmin=vmin, vmax=vmax)
+        colors = [(norm(key), val) for key,val in cmap_colors.items()]
         cmap = LinearSegmentedColormap.from_list('', colors)
+        sns.heatmap(df, annot=True, cmap=cmap, vmin=vmin, vmax=vmax)
     else:
         cmap = 'coolwarm'
+        sns.heatmap(df, annot=True, cmap=cmap)
 
-    sns.heatmap(df, annot=True, cmap=cmap)
+    
 
 def calculate_power(design: pd.DataFrame,
                     formula: str,
@@ -198,3 +208,8 @@ def est_signal_to_noise(design: pd.DataFrame,
         return pred_signal_to_noise[0]
     else:
         raise ValueError('Inputs may be incorrect since multiple signal-to-noise values were returned')
+
+#%% helpers which should never be used by the user
+
+def _round(val, round_val = 2):
+    return round(val, round_val)
