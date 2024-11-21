@@ -11,10 +11,13 @@ from patsy import dmatrix
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import matplotlib.pyplot as plt
 
+from ..math_utils.rescale import rescale
+
 def evaluate_design(design: pd.DataFrame,
                     formula: str,
                     signal_to_noise: float = 2,
                     alpha: float = 0.05,
+                    rescale_vals: Dict = None
                     ) -> pd.DataFrame:
     """
     Wrapper which takes in an experimental design and a formula and checks for
@@ -27,12 +30,19 @@ def evaluate_design(design: pd.DataFrame,
         formula (str): patsy formula of the model, for example 'A + B + A:B'
         signal_to_noise (float, optional): signal-to-noise ratio. Defaults to 2.
         alpha (float, optional): significance level. Defaults to 0.05.
+        rescale_vals (Dict): dict where keys are the column names and the vals are a list of [min_val,max_val] for rescaling
 
     Returns:
         pd.DataFrame: Pandas dataframe calculating the power and VIF for each term
                         in the formula. Any aliased terms are removed before running
                         the calculations.
     """
+
+    design = design.copy()
+
+    if rescale_vals:
+        design = _norm_design(design,rescale_vals)
+
     # run this to get the aliased terms and what they are aliased with
     alias_list, _ = dexpy.alias.alias_list(formula, design)
 
@@ -63,6 +73,7 @@ def evaluate_design(design: pd.DataFrame,
     
 def calculate_covariance_matrix(design: pd.DataFrame,
                          formula: str,
+                         rescale_vals: Dict = None
                          ) -> pd.DataFrame:
     """
     Wrapper to calculate covariance and
@@ -70,10 +81,16 @@ def calculate_covariance_matrix(design: pd.DataFrame,
     Args:
         design (pd.DataFrame): Pandas dataframe of the actual experiments
         formula (str): patsy formula of the model, for example 'A + B + A:B'
+        rescale_vals (Dict): dict where keys are the column names and the vals are a list of [min_val,max_val] for rescaling
 
     Returns:
         pd.DataFrame: Pandas dataframe of the covariance matrix
     """
+
+    design = design.copy()
+
+    if rescale_vals:
+        design = _norm_design(design,rescale_vals)
 
     X = patsy.dmatrix(formula, design, return_type='dataframe')
 
@@ -85,6 +102,7 @@ def calculate_covariance_matrix(design: pd.DataFrame,
 
 def calculate_correlation_matrix(design: pd.DataFrame,
                          formula: str,
+                         rescale_vals: Dict = None
                          ) -> pd.DataFrame:
     """
     Wrapper to calculate the covariance matrix
@@ -92,10 +110,16 @@ def calculate_correlation_matrix(design: pd.DataFrame,
     Args:
         design (pd.DataFrame): Pandas dataframe of the actual experiments
         formula (str): patsy formula of the model, for example 'A + B + A:B'
+        rescale_vals (Dict): dict where keys are the column names and the vals are a list of [min_val,max_val] for rescaling
 
     Returns:
         pd.DataFrame: Pandas dataframe of the correlation matrix
     """
+
+    design = design.copy()
+
+    if rescale_vals:
+        design = _norm_design(design,rescale_vals)
 
     X = patsy.dmatrix(formula, design, return_type='dataframe')
 
@@ -130,6 +154,7 @@ def calculate_power(design: pd.DataFrame,
                     formula: str,
                     signal_to_noise: float = 2,
                     alpha: float = 0.05,
+                    rescale_vals: Dict = None
                     ) -> pd.DataFrame:
     """
     Calculates the power of every term in a model
@@ -139,11 +164,17 @@ def calculate_power(design: pd.DataFrame,
         formula (str): patsy formula of the model, for example 'A + B + A:B'
         signal_to_noise (float, optional): signal-to-noise ratio. Defaults to 2.
         alpha (float, optional): significance level. Defaults to 0.05.
+        rescale_vals (Dict): dict where keys are the column names and the vals are a list of [min_val,max_val] for rescaling
 
     Returns:
         pd.DataFrame: Pandas dataframe where the first column contains the formula terms
                         and the second column contains the power of each term
     """
+
+    design = design.copy()
+
+    if rescale_vals:
+        design = _norm_design(design,rescale_vals)
 
     X = patsy.dmatrix(formula, design, return_type='dataframe')
     terms = X.columns
@@ -151,18 +182,27 @@ def calculate_power(design: pd.DataFrame,
     return pd.DataFrame({'Term':terms,'Power':powers})
 
 def calculate_VIF(design: pd.DataFrame,
-                    formula: str
+                    formula: str,
+                    rescale_vals: Dict = None
                     ) -> pd.DataFrame:
     """
     Calculates the variance inflation factor (VIF) of each term in the model.
 
     Args:
         design (pd.DataFrame): Pandas dataframe of the actual experiments
+        formula (str): patsy formula of the model, for example 'A + B + A:B'
+        rescale_vals (Dict): dict where keys are the column names and the vals are a list of [min_val,max_val] for rescaling
 
     Returns:
         pd.DataFrame: Pandas dataframe where the first column contains the formula terms
                         and the second column contains the VIF of each term
     """
+
+    design = design.copy()
+
+    if rescale_vals:
+        design = _norm_design(design,rescale_vals)
+
     X = patsy.dmatrix(formula, design, return_type='dataframe')
     terms = X.columns
     vifs = [variance_inflation_factor(X.values, i) for i in range(len(X.columns))]
@@ -175,6 +215,7 @@ def est_signal_to_noise(design: pd.DataFrame,
                         goal_power: float = 0.995,
                         alpha: float = 0.05,
                         initial_guess: float = 1.0,
+                        rescale_vals: Dict = None
                         ) -> float:
     """
     Within a specific design of experiments design and patsy model,
@@ -192,6 +233,12 @@ def est_signal_to_noise(design: pd.DataFrame,
     Returns:
         float: returns the estimated signal-to-noise ratio
     """
+
+    design = design.copy()
+
+    if rescale_vals:
+        design = _norm_design(design,rescale_vals)
+
     X = dmatrix(model, design)
     X_formula = X.design_info.describe().replace(' ','')
     index_term = X_formula.split('+').index(term)
@@ -213,3 +260,10 @@ def est_signal_to_noise(design: pd.DataFrame,
 
 def _round(val, round_val = 2):
     return round(val, round_val)
+
+def _norm_design(design, rescale_vals):
+    df = design.copy()
+    for col in design.columns:
+        rescaler = rescale(rescale_vals[col][0],rescale_vals[col][1],-1,1)
+        df[col] = rescaler.transform(df[col])
+    return df
