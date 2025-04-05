@@ -13,7 +13,7 @@ For example, a model cannot be y = x**2 + constant. It should be y = x**2 + x + 
 '''
 
 def get_all_combo_from_exponent(term_str: str,
-                                  outpit_patsy: bool = True) -> List:
+                                  output_patsy: bool = True) -> List:
     '''
     Takes in a str from patsy (such as I(A**2)) and returns itself plus lower order terms
     For example, if term_str is C**3, it will return a list of [I(C**3),I(C**2),C].
@@ -38,7 +38,7 @@ def get_all_combo_from_exponent(term_str: str,
         model_terms.append(f'I({base_term}**{exponent})')
         exponent -= 1
         while exponent > 1:
-            if outpit_patsy:
+            if output_patsy:
                 sub_term = f'I({base_term}**{exponent})'
             else:
                 sub_term = f'{base_term}**{exponent}'
