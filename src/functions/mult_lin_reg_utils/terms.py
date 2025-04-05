@@ -75,23 +75,24 @@ def get_base_exponent(term_str: str) -> List:
     Takes in a term (str) such as C**3 and returns a list of [base,exponent] (such as [C,3]).
     Only works with powers like np.power(A,2) and A**2.
     '''
+    term_str = term_str.replace(' ','')
     if ':' in term_str:
         raise ValueError('term contains interaction and not just an exponent')
     else:
         base_term,exponent = term_str,1
         if 'np.power(' in term_str:
             comma_index = term_str.index(',')
-            base_term = term_str[11:comma_index]
-            exponent = float(term_str[comma_index+1:-2])
+            base_term = term_str[9:comma_index]
+            exponent = float(term_str[comma_index+1:-1])
 
-        if '**' in term_str:
+        elif '**' in term_str:
             base_term,exponent = term_str[2:-1].split('**')
             exponent = float(exponent)
         
-        if '[T.' in term_str:
+        elif '[T.' in term_str:
             base_term = term_str.split('[T.')[0]
             base_term = 1
-        
+
         if int(exponent) == exponent: # remove float exponents if exponent is basically an int. useful for later when removing duplicates
             exponent = int(exponent)
 

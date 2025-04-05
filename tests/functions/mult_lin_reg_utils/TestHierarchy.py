@@ -8,7 +8,7 @@ class TestHierarchy(unittest.TestCase):
     def test_get_all_combo_from_exponent(self):
         self.assertCountEqual(hierarchy.get_all_combo_from_exponent('I(C**3)'), ['I(C**3)','I(C**2)','C'])
         self.assertCountEqual(hierarchy.get_all_combo_from_exponent('C'), ['C'])
-        self.assertCountEqual(hierarchy.get_all_combo_from_exponent('np.power(C,5)'),
+        self.assertCountEqual(hierarchy.get_all_combo_from_exponent('I(C**5)'),
                              ['I(C**5)','I(C**4)','I(C**3)','I(C**2)','C'])
         
     def test_get_all_combo_from_interaction(self):
