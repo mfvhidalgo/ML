@@ -2,7 +2,7 @@
 import unittest
 
 test_dir = 'tests'
-pattern = '*.py'
+pattern = 'Test*.py'
 
 loader = unittest.TestLoader()
 suite = loader.discover(start_dir=test_dir, pattern=pattern)

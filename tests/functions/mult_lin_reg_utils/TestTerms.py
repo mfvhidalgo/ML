@@ -1,7 +1,7 @@
 # python -m tests.functions.mult_lin_reg_utils.TestTerms
 import unittest
 
-import src.functions.mult_lin_reg_utils.terms as terms
+import src.ml_utils.mult_lin_reg_utils.terms as terms
 
 class TestTerms(unittest.TestCase):
     def test_get_base_exponent(self):

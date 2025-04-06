@@ -3,8 +3,8 @@ import unittest
 import pandas as pd
 import os
 
-import src.functions.mult_lin_reg_utils.model_reduction as model_reduction
-from src.functions.helper_funcs import load_data_xlsx
+import src.ml_utils.mult_lin_reg_utils.model_reduction as model_reduction
+from src.ml_utils.helper_funcs import load_data_xlsx
 
 data_xlsx = load_data_xlsx('tests//functions//mult_lin_reg_utils//Data.xlsx')
 
