@@ -34,7 +34,7 @@ def suggest_next_experiment(X_actual: np.array,
                 ys (np.array): array of recommended experiments
     """
 
-    acqs, indexes, xs = [], [], []
+    acqs, indexes, xs = [], [], np.zeros((n_suggestions, X_actual.shape[1]))
     if goal == 'min':
         X, y = X_actual.copy(), y_actual.copy()
     elif goal == 'max':
@@ -77,7 +77,8 @@ def suggest_next_experiment(X_actual: np.array,
 
         acqs.append(acq)
         indexes.append(i)
-        xs.append(X_candidate)
+        #xs.append(X_candidate)
+        xs[n_suggestion] = X_candidate
 
         X = np.vstack([X, X_candidate])
         y = np.append(y, y_candidate)
