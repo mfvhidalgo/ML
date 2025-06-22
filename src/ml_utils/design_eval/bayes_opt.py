@@ -60,7 +60,7 @@ def suggest_next_experiment(X_actual: np.array,
         else:
             raise ValueError(f'Invalid acq_func_name of {acq_func_name}')
 
-        X_candidate = X_candidates[i][0]
+        X_candidate = X_candidates[i]
         if kriging_believer == 'prediction':
             y_candidate = y_pred[i]
         elif kriging_believer == 'mean':
