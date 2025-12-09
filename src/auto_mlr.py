@@ -7,7 +7,9 @@ import pandas as pd
 from statsmodels.formula.api import ols
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 import os
+import pickle
 
 import functions.mult_lin_reg_utils as mlr_utils
 import functions.mult_lin_reg_utils.model_reduction as mod_red
@@ -18,6 +20,7 @@ from functions.model_eval.pred_vs_act import plot_pred_vs_act
 import functions.mult_lin_reg_utils.power_transform as power_transform
 from functions.helper_funcs import load_data_xlsx
 
+matplotlib.use('Agg')
 
 #%%
 
@@ -27,6 +30,7 @@ except:
     src_dir = os.getcwd()
     
 output_dir = helper_funcs.create_dir('Output',src_dir)
+models_dir = helper_funcs.create_dir('models',output_dir)
 boxcox_dir = helper_funcs.create_dir('Box-Cox',output_dir)
 pred_vs_act_dir = helper_funcs.create_dir('Pred vs Act',output_dir)
     
@@ -136,3 +140,12 @@ with pd.ExcelWriter(os.path.join(output_dir,f"Models summary.xlsx")) as writer:
     df_best_models.to_excel(writer, sheet_name='best models')
     df_all_models_real[df_all_models.columns].to_excel(writer, sheet_name='all models in real units')
     df_best_models_real[df_best_models.columns].to_excel(writer, sheet_name='best models in real units')
+
+for response in responses:   
+    for lmbda in reduced_models[response]['models'].keys():
+        for key_stat in reduced_models[response]['models'][lmbda].keys():
+            for direction in reduced_models[response]['models'][lmbda][key_stat].keys():
+                model = reduced_models[response]['models'][lmbda][key_stat][direction]
+
+                with open(os.path.join(models_dir,f'{response}_{key_stat}_{direction}.pkl'), 'wb') as f:
+                    pickle.dump(model, f)
