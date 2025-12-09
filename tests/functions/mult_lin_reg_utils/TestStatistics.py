@@ -3,7 +3,7 @@ import unittest
 from statsmodels.formula.api import ols
 import pandas as pd
 
-import src.ml_utils.mult_lin_reg_utils.statistics as statistics
+import src.functions.mult_lin_reg_utils.statistics as statistics
 
 class TestStatistics(unittest.TestCase):
 

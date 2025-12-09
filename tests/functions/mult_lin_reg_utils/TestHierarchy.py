@@ -1,7 +1,7 @@
 # python -m tests.functions.mult_lin_reg_utils.TestHierarchy
 import unittest
 
-import src.ml_utils.mult_lin_reg_utils.hierarchy as hierarchy
+import src.functions.mult_lin_reg_utils.hierarchy as hierarchy
 
 class TestHierarchy(unittest.TestCase):
 

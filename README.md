@@ -60,8 +60,10 @@ Data should first be entered into Data.xlsx. Afterwards, specific ML scripts can
 ### Guides
 
 * guide for using Data.xlsx.
-* guide for using auto_mlr
+* guide for using auto_mlr with and without Data.xlsx
+* guide for categorical MLR
 * guide for using functions\mult_lin_reg_utils
+* clean-up all current guides
 
 ## Authors
 

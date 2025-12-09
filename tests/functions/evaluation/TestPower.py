@@ -3,7 +3,7 @@
 import unittest
 import pandas as pd
 
-import src.ml_utils.design_eval.power as power
+import src.functions.design_eval.power as power
 
 class TestPower(unittest.TestCase):
     def setUp(self):
