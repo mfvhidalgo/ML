@@ -316,7 +316,8 @@ def auto_model_reduction(data: pd.DataFrame,
                          response: str,
                          key_stat: str = 'aicc_bic',
                          direction: str = 'forwards_backwards',
-                         lambdas: List = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2]) -> Dict:
+                         lambdas: List = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],
+                         groupby_cols: List = None) -> Dict:
     """
     Automatically runs model reduction and selects the best model when comparing different statistics and directions.
     Default is to check both aicc (forwards) vs aicc (backwards) vs bic (forwards) vs bic (backwards).
@@ -334,6 +335,7 @@ def auto_model_reduction(data: pd.DataFrame,
                         or 'aicc_bic' for both.
         direction (str): direction of model reduction, 'forwards', 'backwards', or 'forwards_backwards'
         lambdas (List): values of lambda to try power transformations on
+        groupby_cols (List): list of col names for r2_press calculations. If set to None, will run standard r2_press calculations. 
 
     Returns:
         Dict: dict with keys of each lambda value tested. Afterwards, the keys are:
@@ -390,7 +392,7 @@ def auto_model_reduction(data: pd.DataFrame,
                                                             key_stat,
                                                             direction
                                                             )
-                r2press = calc_r2_press(models[lmbda][key_stat][direction])
+                r2press = calc_r2_press(model = models[lmbda][key_stat][direction], groupby_cols=groupby_cols)
                 r2adjs.append(models[lmbda][key_stat][direction].rsquared_adj)
                 r2presses.append(r2press)
                 d_r2s.append(abs(models[lmbda][key_stat][direction].rsquared_adj - r2press))
