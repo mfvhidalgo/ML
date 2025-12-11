@@ -1,6 +1,6 @@
 #%% USER DEFINED INPUTS
 
-terms_list = ['A', 'B', 'C', 'A:B', 'A:C', 'B:C', 'I(A**2)', 'I(B**2)', 'I(C**2)', 'I(A**3)','I(A**2):I(B**2)', 'I(A**2):I(C**2)',]
+terms_list = None # either a list of terms for the model or None
 
 #%% import
 import pandas as pd
@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import os
+import itertools
 import pickle
 
 import functions.mult_lin_reg_utils as mlr_utils
@@ -49,6 +50,26 @@ responses = data_xlsx['responses']
 lambdas = data_xlsx['lambdas']
 rescalers = data_xlsx['rescalers']
 
+#%% auto-define terms_list
+
+if terms_list is not None:
+
+    linear_terms = list(features.keys())
+    twoFI_terms = [f'{term1}:{term2}' for term1, term2 in itertools.combinations(linear_terms, 2)]
+
+    quadratic_terms = [f'I({term} ** 2)' for term, feature_type in zip(design_parameters.index, design_parameters['Feature type']) if feature_type == 'Numerical' ]
+
+    model_type = pd.read_excel(os.path.join(src_dir,'Data.xlsx'), sheet_name='Misc', header=None, index_col=0).loc['model'].values[0]
+
+    if model_type == 'Linear':
+        terms_list = linear_terms
+    elif model_type == '2FI':
+        terms_list = linear_terms + twoFI_terms
+    elif model_type == 'Quadratic':
+        terms_list = linear_terms + twoFI_terms + quadratic_terms
+    else:
+        raise ValueError(f'Invalid model_type of {model_type}')
+
 #%%
 
 reduced_models = {}
@@ -61,7 +82,7 @@ for response in responses:
                                                             terms_list,
                                                             term_types = term_types,
                                                             response = response,
-                                                            key_stat = 'aicc_bic',
+                                                            key_stat = 'aicc',
                                                             direction ='forwards_backwards',
                                                             lambdas = lambdas[response])
     
