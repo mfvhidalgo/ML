@@ -64,7 +64,7 @@ def best_boxcox_lambda(df_input: pd.DataFrame,
             'lambdas':lambdas,
             'ln resid sum squares':ln_residSS,
             'confidence interval':conf_int_limit,
-            #'best lambda':best_lambda
+            'best lambda':best_lambda
             }
 
 def box_cox_transform(series_input: pd.Series,
