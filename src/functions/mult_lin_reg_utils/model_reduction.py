@@ -312,8 +312,8 @@ def get_best_model(data: pd.DataFrame) -> pd.DataFrame:
 
 def auto_model_reduction(data: pd.DataFrame,
                          terms_list: List,
-                         term_types: Dict,
                          response: str,
+                         term_types: Dict = None,
                          key_stat: str = 'aicc_bic',
                          direction: str = 'forwards_backwards',
                          lambdas: List = [-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],
@@ -327,7 +327,8 @@ def auto_model_reduction(data: pd.DataFrame,
         data (pd.DataFrame): df containing all the features, responses, and their respective values
         terms_list (List): list containing all the terms of the largest model.
         term_types (Dict): dict where the keys are the lowest-order terms and the values are either
-                           'Mixture' or 'Process'
+                           'Mixture' or 'Process'.
+                           If None, assumes Process for all features. Defaults to None.
         response (str): the column name in data of the response to be modeled.
         key_stat (str): statistic used to determine if a term will be added or not. can be
                         'aicc' for the corrected Akeike Information Criterion,
@@ -364,6 +365,9 @@ def auto_model_reduction(data: pd.DataFrame,
     else:
         raise ValueError('direction can only be forwards, backwards, or forwards_backwards')
     
+    if term_types is None:
+        term_types = {term: 'Process' for term in terms_list}
+
     boxcox_info = best_boxcox_lambda(data,
                                      list_to_formula(terms_list,term_types,response),
                                      response,

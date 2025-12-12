@@ -52,7 +52,7 @@ rescalers = data_xlsx['rescalers']
 
 #%% auto-define terms_list
 
-if terms_list is not None:
+if terms_list is None:
 
     linear_terms = list(features.keys())
     twoFI_terms = [f'{term1}:{term2}' for term1, term2 in itertools.combinations(linear_terms, 2)]
